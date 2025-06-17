@@ -313,7 +313,5 @@ def reset_db():
                 user_id=2),
         Message(sent_time=generate_random_time(), content="Sample message #98 from user 8 in group 1", group_id=1,
                 user_id=8),
-        Message(sent_time=generate_random_time(), content="Sample message #99 from user 9 in group 1", group_id=1,
-                user_id=9),
         ])
     db.session.commit()
