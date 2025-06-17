@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "bootstrap_wtf.html" as wtf %}
+
+{% block content %}
+{% if book==None %}
+{% else %}
+<div class="container">
+
+    <h2>{{ book.title }}</h2>
+
+    <p>Author:  {{ book.title }}</p>
+
+    <p>Genre:  {{ book.genre }}</p>
+
+    <p>Summary:  {{ book.summary }}</p>
+
+    <p>Published Year:  {{ book.year }}</p>
+{% endif %}
+
+
+
+</div>
+{% endblock %}

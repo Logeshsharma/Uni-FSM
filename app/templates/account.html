@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% import "bootstrap_wtf.html" as wtf %}
+
+{% block content %}
+<div>
+    <h1>Private Account Page</h1>
+
+    <p>Hello {{ current_user.username }}</p>
+
+    <p>This page is only available to you as the currently logged in user</p>
+
+    <p>The email address we have recorded for you is: {{ current_user.email }}</p>
+
+    <h3>Loaned Books </h3>
+    <div class="container mt-4">
+        <!-- Bootstrap Table Responsive with Rounded Corners -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                <tr>
+                    <th>Book Title</th>
+                    <th>Book Author</th>
+                    <th>Loaned time</th>
+                    <th>Book Summary</th>
+                    <th>Delete</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Loop to create table rows -->
+                {% for loan in loans %}
+                <tr>
+                    <td>{{ loan.book.title }}</td>
+                    <td>{{ loan.book.author }}</td>
+
+                    <td>{{ loan.date_loaned }}</td>
+                    <td>{{ loan.book.summary }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_book') }}" method="post">
+                            {{ chooseForm.csrf_token() }}
+                            {{ chooseForm.choice(value=loan.book.id) }}
+                            <button class="btn" type="submit">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </td>
+
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

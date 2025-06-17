@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Bootstrap Table Responsive with Rounded Corners -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+            <tr>
+                <!-- Loop to create table headers -->
+                {% for item in books[0] %}
+                <th>{{ item }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Loop to create table rows -->
+            {% for book in books[1:] %}
+            <tr>
+                <td>{{ book.id }}</td>
+                <td>
+                    <div>
+                        <a href="{{ url_for('book_details',book_id=book.id) }}">{{ book.title }}</a>
+                    </div>
+                </td>
+                <td>{{ book.author }}</td>
+                <td>{{ book.genre }}</td>
+                <td>{{ book.summary }}</td>
+                <td>{{ book.year }}</td>
+                {% if current_user.is_anonymous %}
+                     <td class="table-info" >Login to view the availability</td>
+                {% else %}
+                    {% if book.loan == None %}
+                        <td>Available to borrow</td>
+                    {% endif %}
+                    {% if book.loan != None  and  book.loan.user_id == current_user.id %}
+                         <td class="table-secondary" >Your have loaned it!</td>
+
+                    {% endif %}
+                    {% if book.loan != None and  book.loan.user_id != current_user.id %}
+                        <td class="table-primary" >On loan by others</td>
+
+                    {% endif %}
+
+                {% endif %}
+
+
+
+
+
+
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

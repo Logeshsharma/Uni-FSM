@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <div class="row my-4">
+    <div class="col-12">
+      <h1 class="display-5 fw-bold border-bottom pb-3 mb-4" style="color: #6f42c1; border-color: #6f42c1;">{{ task.title }}</h1>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #6f42c1;">
+      <h5 class="mb-0">Task Details</h5>
+    </div>
+    <div class="card-body">
+      <p><strong>Task ID:</strong> {{ task.id }}</p>
+      <p><strong>Description:</strong> {{ task.description }}</p>
+      <p>
+        <strong>Upload Required:</strong>
+        {% if task.isUpload %}
+          <span class="badge bg-success">Yes</span>
+        {% else %}
+          <span class="badge bg-danger">No</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #6f42c1;">
+      <h5 class="mb-0">Group Statuses for Task #{{ task.id }}</h5>
+    </div>
+    <div class="card-body">
+      {% if task_statuses %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead style="background-color: #6f42c1; color: white;">
+              <tr>
+                <th>Group ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for status in task_statuses %}
+              <tr>
+                <td>{{ status.group_id }}</td>
+                <td>{{ status.status }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3">
+          <p class="text-muted small">Showing {{ task_statuses|length }} status(es) for task ID {{ task.id }}</p>
+        </div>
+      {% else %}
+        <div class="alert alert-warning">
+          <p class="mb-0">No status information available for this task.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-4 text-center">
+    <a href="{{ url_for('view_tasks') }}" class="btn text-white" style="background-color: #6f42c1;">Back to Tasks</a>
+  </div>
+</div>
+{% endblock %}
+
