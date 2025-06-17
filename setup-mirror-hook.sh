@@ -10,7 +10,7 @@ mkdir -p "$HOOK_DIR"
 cat > "$HOOK_FILE" << 'EOF'
 #!/bin/bash
 echo "🔁 Mirroring to GitHub..."
-git push --mirror github-mirror
+git push --mirror git@github.com-Logeshsharma:Logeshsharma/Uni-FSM.git
 echo "✅ Mirror completed."
 EOF
 
