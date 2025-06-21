@@ -1,5 +1,8 @@
+from crypt import methods
+
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.security import generate_password_hash
+from wtforms.validators import email
 
 from app import app
 from app.models import User, Group, GroupTaskStatus, Task, Message
@@ -9,6 +12,7 @@ import sqlalchemy as sa
 from app import db
 from urllib.parse import urlsplit
 import random
+from app import fb_db
 
 
 @app.route("/")
@@ -46,6 +50,20 @@ def registration():
     return render_template('registration.html', title="", form=form)
 
 
+
+@app.route('/add_user', methods=['GET','POST'])
+def add_user():
+    data = request.get_json()
+    name = data.get('name')
+    email = data.get('email')
+
+    doc_ref = fb_db.collection('users').document()
+    doc_ref.set({
+        'name':name,
+        'email':email
+    })
+
+    return jsonify({'status': 'User added successfully'}), 200
 
 
 @app.route('/login', methods=['GET', 'POST'])
