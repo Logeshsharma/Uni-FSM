@@ -22,7 +22,7 @@ login = LoginManager(app)
 login.login_view = 'login'
 
 # Use a service account.
-if os.environ.get('FLASK_ENV') == 'production':
+if os.environ.get('GOOGLE_CREDENTIALS'):
     firebase_dict = json.loads(os.environ['GOOGLE_CREDENTIALS'])
     cred = credentials.Certificate(firebase_dict)
 else:
