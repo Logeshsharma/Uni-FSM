@@ -1,4 +1,3 @@
-from crypt import methods
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.security import generate_password_hash
