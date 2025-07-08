@@ -26,7 +26,7 @@ if os.environ.get('GOOGLE_CREDENTIALS'):
     firebase_dict = json.loads(os.environ['GOOGLE_CREDENTIALS'])
     cred = credentials.Certificate(firebase_dict)
 else:
-    cred = credentials.Certificate('uni-fsm-7b5e1-firebase-adminsdk-fbsvc-7d190e7da4.json')
+    cred = credentials.Certificate('uni-fsm-7b5e1-firebase-adminsdk-fbsvc-4bfb6e8a36.json')
 
 firebase_app = firebase_admin.initialize_app(cred)
 

@@ -1,6 +1,5 @@
-
 from flask import render_template, redirect, url_for, flash, request, jsonify
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.validators import email
 
 from app import app
@@ -16,50 +15,24 @@ from app import fb_db
 
 @app.route("/")
 def home():
-    # View handler for the web app's homepage.
-    if current_user.is_authenticated:
-        username = current_user.username
-        return render_template("home_authenticated.html", username=username, title="")
-    else:
-        return render_template('home.html', title="")
-
-@app.route('/registration', methods=['GET', 'POST'])
-def registration():
-    # View handler for the web app's registration page.
-    if current_user.is_authenticated:
-        flash("You are already registered/logged in!", 'error')
-        return redirect(url_for('home'))
-    form = RegisterForm()
-    if form.validate_on_submit():
-        user_to_check = db.session.scalar(db.select(User).where(User.student_id==form.student_id.data))
-        if user_to_check == None:
-            flash("Entered credentials do no match our records - please check and try again", "danger")
-            return redirect(url_for('registration'))
-        if user_to_check.email != form.email.data:
-            flash("Entered credentials do no match our records - please check and try again", "danger")
-            return redirect(url_for('registration'))
-        if user_to_check.registered == True:
-            flash("You are already registered in the system! Head on to the mobile app and meet some new people!", "danger")
-            return redirect(url_for('registration'))
-        user_to_check.password_hash = generate_password_hash(form.password.data)
-        user_to_check.registered = True
-        db.session.commit()
-        flash("You have successfully registered with Mix&Match. Head over to the mobile app and have a go at meeting new people!", "success")
-        return redirect(url_for("registration"))
-    return render_template('registration.html', title="", form=form)
+    return render_template('home.html', title="")
 
 
 
-@app.route('/add_user', methods=['GET','POST'])
+@app.route('/add_user', methods=['GET', 'POST'])
 def add_user():
     data = request.get_json()
-    name = data.get('name')
+    username = data.get('username')
     email = data.get('email')
+    password = generate_password_hash(data.get('password'))
+    role = data.get('role')
 
     doc_ref = fb_db.collection('users').document()
     doc_ref.set({
-        'name':name,
-        'email':email
+        'username': username,
+        'email': email,
+        'password': password,
+        'role': role,
     })
 
     return jsonify({'status': 'User added successfully'}), 200
@@ -72,50 +45,75 @@ def login():
         return redirect(url_for('home'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = db.session.scalar(
-            sa.select(User).where(User.username == form.username.data))
-        if user is None:
+        username = form.username.data
+        password = form.password.data
+
+        user_ref = fb_db.collection('users').where('username', '==', username).limit(1)
+        docs = user_ref.stream()
+        user_data = next(docs, None)
+
+        print('user_data ', user_data)
+
+        if not user_data:
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
-        if user.role != "Admin":
-            flash("Only admins can use the online portal. For student and mentor access use the mobile Mix&Match app", "danger")
-            return redirect("login")
-        if not user.check_password(form.password.data):
+
+        user_dict = user_data.to_dict()
+
+        if user_dict['role'] != "Admin":
+            flash(
+                "Only admins can use the online portal. Use the mobile Mix&Meet app for student or technician access.",
+                "danger")
+            return redirect(url_for('login'))
+
+        print("check_password_hash(user_dict['password'], password) ",
+              check_password_hash(user_dict['password'], password))
+
+        if not check_password_hash(user_dict['password'], password):
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
+
+        user = User(
+            id=user_data.id,
+            username=user_dict['username'],
+            role=user_dict['role']
+        )
         login_user(user, remember=form.remember_me.data)
+
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('home')
         return redirect(next_page)
-    return render_template('generic_form.html', title='', form=form)
+
+    return render_template('generic_form.html', title='Login', form=form)
 
 
-@app.route('/login_mobile', methods=['GET', 'POST'])
+@app.route('/login_mobile', methods=['POST'])
 def login_mobile():
-    # API for mobile app's login authentication.
-    if request.method == 'POST':
-        username = request.json.get('username')
-        password = request.json.get('password')
-        user = db.session.scalar(
-            sa.select(User).where(User.username == username))
+    username = request.json.get('username')
+    password = request.json.get('password')
 
-        if not user.registered:
-            return jsonify({"message": "Student not yet registered. To register for the Mix&Match app, please visit the following page: https://bus-test-f592.onrender.com/registration", "status": "error"}), 401
+    user_ref = fb_db.collection('users').where('username', '==', username).limit(1)
+    docs = user_ref.stream()
+    user_doc = next(docs, None)
 
-        if user is None or not user.check_password(password):
-            return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
+    if not user_doc:
+        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
 
-        if user.role == "Admin":
-            return jsonify({"message": "Mobile app only available for students and mentors. To access the admin features, please use the web app backend at https://bus-test-f592.onrender.com/login", "status": "error"}), 401
+    user = user_doc.to_dict()
 
-        if user.group_id is None:
-            return jsonify({"message": "You have not been assigned a group yet. Please wait for a day and try again. If the problem persists, contact the admin supervisors", "status": "error"}), 401
+    if not check_password_hash(user['password'], password):
+        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
 
 
-        return jsonify(
-            {"message": "Login successful", "status": "success", "id": user.id, "username": user.username,
-             "email": user.email, "role": user.role, "groupId": user.group_id, }), 200
+    return jsonify({
+        "message": "Login successful",
+        "status": "success",
+        "id": user_doc.id,
+        "username": user['username'],
+        "email": user['email'],
+        "role": user['role']
+    }), 200
 
 
 @app.route('/get_group_mobile/<int:group_id>')
@@ -154,15 +152,16 @@ def get_tasks_mobile(group_id):
                 'desc': task_status.task.description,
                 'isUpload': task_status.task.isUpload,
                 'status': task_status.status,
-                'start_datetime' : task_status.task.start_datetime,
-                'end_datetime' : task_status.task.end_datetime,
-                'location' : task_status.task.location
+                'start_datetime': task_status.task.start_datetime,
+                'end_datetime': task_status.task.end_datetime,
+                'location': task_status.task.location
             }
             group_response['tasks'].append(task)
     except Exception:
         return jsonify({'tasks': []}), 200
 
     return jsonify(group_response), 200
+
 
 @app.route('/get_group_messages/<int:group_id>/<int:number_of_messages>')
 def get_group_messages(group_id, number_of_messages):
@@ -173,11 +172,12 @@ def get_group_messages(group_id, number_of_messages):
                                       .order_by(Message.sent_time.desc())
                                       .limit(number_of_messages)).all()
         messages_dict = {
-            'messages' : [message.to_dict() for message in messages[::-1]]
+            'messages': [message.to_dict() for message in messages[::-1]]
         }
     except Exception:
         return jsonify({'message_id': -1}), 200
     return jsonify(messages_dict)
+
 
 @app.route('/create_task', methods=['GET', 'POST'])
 @login_required
@@ -188,14 +188,16 @@ def create_task():
         return redirect(url_for("home"))
     form = TaskForm()
     if form.validate_on_submit():
-        task = Task(title=form.title.data, description=form.description.data, isUpload=form.isUpload.data, start_datetime=form.start_datetime.data, end_datetime=form.end_datetime.data, location=form.location.data)
+        task = Task(title=form.title.data, description=form.description.data, isUpload=form.isUpload.data,
+                    start_datetime=form.start_datetime.data, end_datetime=form.end_datetime.data,
+                    location=form.location.data)
         db.session.add(task)
         db.session.flush()
         all_group_ids = db.session.scalars(db.select(Group.id)).all()
         for group_id in all_group_ids:
             db.session.add(GroupTaskStatus(task_id=task.id, group_id=group_id))
         db.session.commit()
-        flash("Task created successfully",'success')
+        flash("Task created successfully", 'success')
         return redirect(url_for('create_task'))
     return render_template('create_task.html', title="", form=form)
 
@@ -216,13 +218,14 @@ def update_task_status():
 
     return jsonify({'status': 'Updated'}), 200
 
+
 @app.route("/tasks", methods=["GET"])
 @login_required
 def view_tasks():
     # View handler for displaying a table with all unique tasks in the web app's database.
     try:
         tasks = db.session.scalars(db.select(Task)).all()
-        return render_template("view_tasks.html", tasks=tasks, title ="")
+        return render_template("view_tasks.html", tasks=tasks, title="")
     except Exception as e:
         app.logger.error(f"Error in view_tasks: {str(e)}")
         return render_template("errors/500.html", title="Error"), 500
@@ -238,9 +241,9 @@ def task_details(task_id):
             flash("Task not found", "danger")
             return redirect(url_for("view_tasks"))
 
-        task_statuses = db.session.scalars(db.select(GroupTaskStatus).where(GroupTaskStatus.task_id == task_id) ).all()
+        task_statuses = db.session.scalars(db.select(GroupTaskStatus).where(GroupTaskStatus.task_id == task_id)).all()
 
-        return render_template("task_details.html",task=task,task_statuses=task_statuses, title="")
+        return render_template("task_details.html", task=task, task_statuses=task_statuses, title="")
 
     except Exception as e:
         app.logger.error(f"Error in task_details: {str(e)}")
@@ -256,11 +259,13 @@ def admin_account():
     if current_user.is_authenticated and current_user.role == 'Admin':
         q = sa.select(User)
         all_users = db.session.scalars(q).all()
-        regist_status = {0:'Not Registered', 1:'Registered'}
-        return render_template('admin_account.html', title='', all_users=all_users, regist_status=regist_status, form=form)
+        regist_status = {0: 'Not Registered', 1: 'Registered'}
+        return render_template('admin_account.html', title='', all_users=all_users, regist_status=regist_status,
+                               form=form)
     else:
         flash(f'Web portal features are accessible by admins only. Access denied', 'danger')
     return redirect(url_for('home'))
+
 
 @app.route('/group_generation', methods=['GET', 'POST'])
 @login_required

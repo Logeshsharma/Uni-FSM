@@ -9,51 +9,69 @@ from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.testing.schema import mapped_column
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db, login
+from app import db, login, fb_db
 from dataclasses import dataclass
 
-
 @dataclass
-class User(UserMixin, db.Model):
-    # Contains all users in the system.
-    __tablename__ = 'users'
+class User(UserMixin):
+    def __init__(self, id, username, role):
+        self.id = id
+        self.username = username
+        self.role = role
 
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    student_id: so.Mapped[Optional[int]] = so.mapped_column(unique=True, nullable=True)
-    username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True, unique=True)
-    email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True, unique=True)
-    password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
-    role: so.Mapped[str] = so.mapped_column(sa.String(10))
-    registered: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
-
-    group_id: so.Mapped[Optional[int]] = mapped_column(ForeignKey('groups.id'), index=True)
-    group: so.Mapped['Group'] = relationship(back_populates='users')
-
-    my_message: so.Mapped[list['Message']] = relationship(back_populates='user')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'email': self.email,
-            'role': self.role,
-            'group_id': self.group_id
-        }
-
-    def __repr__(self):
-        pwh = 'None' if not self.password_hash else f'...{self.password_hash[-5:]}'
-        return f'User(id={self.id}, username={self.username}, email={self.email}, role={self.role}, pwh={pwh})'
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+    def get_id(self):
+        return str(self.id)
 
 
 @login.user_loader
-def load_user(id):
-    return db.session.get(User, int(id))
+def load_user(user_id):
+    doc = fb_db.collection('users').document(user_id).get()
+    if doc.exists:
+        data = doc.to_dict()
+        return User(id=doc.id, username=data['username'], role=data['role'])
+    return None
+
+# @dataclass
+# class User(UserMixin, db.Model):
+#     # Contains all users in the system.
+#     __tablename__ = 'users'
+#
+#     id: so.Mapped[int] = so.mapped_column(primary_key=True)
+#     student_id: so.Mapped[Optional[int]] = so.mapped_column(unique=True, nullable=True)
+#     username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True, unique=True)
+#     email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True, unique=True)
+#     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+#     role: so.Mapped[str] = so.mapped_column(sa.String(10))
+#     registered: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
+#
+#     group_id: so.Mapped[Optional[int]] = mapped_column(ForeignKey('groups.id'), index=True)
+#     group: so.Mapped['Group'] = relationship(back_populates='users')
+#
+#     my_message: so.Mapped[list['Message']] = relationship(back_populates='user')
+#
+#     def to_dict(self):
+#         return {
+#             'id': self.id,
+#             'username': self.username,
+#             'email': self.email,
+#             'role': self.role,
+#             'group_id': self.group_id
+#         }
+#
+#     def __repr__(self):
+#         pwh = 'None' if not self.password_hash else f'...{self.password_hash[-5:]}'
+#         return f'User(id={self.id}, username={self.username}, email={self.email}, role={self.role}, pwh={pwh})'
+#
+#     def set_password(self, password):
+#         self.password_hash = generate_password_hash(password)
+#
+#     def check_password(self, password):
+#         return check_password_hash(self.password_hash, password)
+
+
+# @login.user_loader
+# def load_user(id):
+#     return db.session.get(User, int(id))
 
 
 @dataclass
