@@ -93,6 +93,8 @@ def login_mobile():
     username = request.json.get('username')
     password = request.json.get('password')
 
+    print("🚨 Received JSON:", request.get_json())
+
     user_ref = fb_db.collection('users').where('username', '==', username).limit(1)
     docs = user_ref.stream()
     user_doc = next(docs, None)
@@ -101,6 +103,8 @@ def login_mobile():
         return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
 
     user = user_doc.to_dict()
+
+    print("🚨 check_password_hash(user['password'], password):", check_password_hash(user['password'], password))
 
     if not check_password_hash(user['password'], password):
         return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
