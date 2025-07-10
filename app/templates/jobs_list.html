@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Bootstrap Table Responsive with Rounded Corners -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+            <tr>
+                <!-- Loop to create table headers -->
+                {% for job in jobs[0] %}
+                <th>{{ job }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for job in jobs[1:] %}
+            <tr>
+                <td>{{ job.job_id }}</td>
+                <td>{{ job.title }}</td>
+                <td>{{ job.description }}</td>
+                <td>{{ job.created_by }}</td>
+                <td>{{ job.job_date }}</td>
+                <td>{{ job.status }}</td>
+                <td>{{ job.assigned_to }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
