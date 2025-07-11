@@ -1,18 +1,14 @@
 import uuid
-from crypt import methods
-from unicodedata import category
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from google.cloud import firestore
 from werkzeug.security import generate_password_hash, check_password_hash
-from wtforms.validators import email
 
 from app import app
 from app.models import User, Group, GroupTaskStatus, Task, Message
 from app.forms import LoginForm, RegisterForm, TaskForm, ChooseForm
 from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
-import random
 from app import fb_db
 
 
