@@ -3,10 +3,9 @@ import uuid
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from google.cloud import firestore
 from werkzeug.security import generate_password_hash, check_password_hash
-
 from app import app
-from app.models import User, Group, GroupTaskStatus, Task, Message
-from app.forms import LoginForm, RegisterForm, TaskForm, ChooseForm
+from app.models import User
+from app.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
 from app import fb_db
@@ -141,25 +140,70 @@ def assign_technician(job_id):
         })
         break
 
-@login_required
+
 @app.route('/jobs_list')
+@login_required
 def jobs_list():
     jobs_ref = fb_db.collection('jobs')
     docs = jobs_ref.stream()
 
-    jobs = [['Job Id', 'Title', 'Description', 'Created By', 'Job date','status','Assigned']]
+    jobs = [['Job Id', 'Title', 'Description', 'Created By', 'Job date', 'status', 'Assigned']]
     for doc in docs:
         job = doc.to_dict()
         job['job_id'] = doc.id
 
-        # if 'created_at' in job and job['created_at']:
-        #     job['created_at'] = job['created_at'].to_datetime().strftime("%Y-%m-%d %H:%M:%S")
-        # if 'job_date' in job and job['job_date']:
-        #     job['job_date'] = job['job_date'].to_datetime().strftime("%Y-%m-%d %H:%M:%S")
-
         jobs.append(job)
 
     return render_template('jobs_list.html', jobs=jobs, title="Jobs")
+
+
+@app.route('/jobs_list_client', methods=['GET'])
+def jobs_list_client():
+    user_id = request.args.get('user_id')
+    role = request.args.get('role')
+
+    jobs_query = fb_db.collection('jobs')
+
+    if user_id and role == 'Student':
+        jobs_query = jobs_query.where('created_by', '==', user_id)
+    elif user_id and role == 'Technician':
+        jobs_query = jobs_query.where('assigned_to', '==', user_id)
+
+    docs = jobs_query.stream()
+
+    jobs = []
+    for doc in docs:
+        job = doc.to_dict()
+        job['job_id'] = doc.id
+
+        created_by_id = job.get('created_by')
+        created_by_user = {}
+        if created_by_id:
+            user_doc = fb_db.collection('users').document(created_by_id).get()
+            if user_doc.exists:
+                user_data = user_doc.to_dict()
+                created_by_user = {
+                    "user_id": created_by_id,
+                    "username": user_data.get('username', user_data.get('username'))  # fallback to email
+                }
+
+        assigned_to_id = job.get('assigned_to')
+        assigned_to_user = None
+        if assigned_to_id:
+            tech_doc = fb_db.collection('users').document(assigned_to_id).get()
+            if tech_doc.exists:
+                tech_data = tech_doc.to_dict()
+                assigned_to_user = {
+                    "user_id": assigned_to_id,
+                    "username": tech_data.get('username', tech_data.get('username'))  # fallback to email
+                }
+
+        job['created_by'] = created_by_user
+        job['assigned_to'] = assigned_to_user  # could be None
+
+        jobs.append(job)
+
+    return jsonify(jobs)
 
 
 @app.route('/login_mobile', methods=['POST'])

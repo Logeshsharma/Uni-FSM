@@ -6,8 +6,6 @@ from config import Config
 from jinja2 import StrictUndefined
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-import sqlalchemy as sa
-import sqlalchemy.orm as so
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -19,6 +17,7 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 
 login = LoginManager(app)
+login.init_app(app)
 login.login_view = 'login'
 
 # Use a service account.
@@ -33,8 +32,3 @@ firebase_app = firebase_admin.initialize_app(cred)
 fb_db = firestore.client()
 
 from app import views, models
-from app.debug_utils import reset_db
-
-@app.shell_context_processor
-def make_shell_context():
-    return dict(db=db, sa=sa, so=so, reset_db=reset_db)
