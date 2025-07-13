@@ -2,28 +2,48 @@
 
 {% block content %}
 <div class="container mt-4">
-
-    <!-- Bootstrap Table Responsive with Rounded Corners -->
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+    <h3 class="mb-3">All Jobs</h3>
+    <div class="table-responsive rounded overflow-hidden shadow-sm">
+        <table class="table table-bordered table-striped mb-0 align-middle">
             <thead class="table-dark">
             <tr>
-                <!-- Loop to create table headers -->
-                {% for job in jobs[0] %}
-                <th>{{ job }}</th>
-                {% endfor %}
+                <th>Job ID</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Created By</th>
+                <th>Job Date</th>
+                <th>Status</th>
+                <th>Assigned Technician</th>
+
             </tr>
             </thead>
             <tbody>
-            {% for job in jobs[1:] %}
+            {% for job in jobs %}
             <tr>
-                <td>{{ job.job_id }}</td>
+                <td><a href="{{ url_for('job_details', job_id=job.job_id) }}">{{ job.job_id }}</a></td>
                 <td>{{ job.title }}</td>
                 <td>{{ job.description }}</td>
                 <td>{{ job.created_by }}</td>
                 <td>{{ job.job_date }}</td>
                 <td>{{ job.status }}</td>
-                <td>{{ job.assigned_to }}</td>
+                <td>
+                    {% if current_user.role == 'Admin' %}
+                    <form method="POST" action="{{ url_for('reassign_technician') }}">
+                        <input type="hidden" name="job_id" value="{{ job.job_id }}">
+                        <select name="assigned_to" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Select Technician</option>
+                            {% for tech in available_technicians %}
+                            <option value="{{ tech.id }}"
+                                    {% if job.assigned_to and tech.id== job.assigned_to.id %}selected{% endif %}>
+                                {{ tech.name }} ({{ tech.status_label }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% else %}
+                    {{ job.assigned_to.name if job.assigned_to else 'Unassigned' }}
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
             </tbody>
@@ -31,4 +51,3 @@
     </div>
 </div>
 {% endblock %}
-
