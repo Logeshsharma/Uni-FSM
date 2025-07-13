@@ -11,6 +11,11 @@ from urllib.parse import urlsplit
 from app import fb_db
 
 
+# Pending
+# Assigned
+# On process
+# Completed
+
 @app.route("/")
 def home():
     return redirect(url_for('jobs_list'))
@@ -105,7 +110,7 @@ def create_job():
         'description': description,
         'created_by': user_id,
         'assigned_to': None,
-        'status': 'pending',
+        'status': 'Pending',
         'job_category': job_category,
         'job_date': job_date,
         'job_time': job_time,
@@ -132,7 +137,7 @@ def assign_technician(job_id):
         tech_id = tech.id
         job_ref.update({
             'assigned_to': tech_id,
-            'status': 'assigned'
+            'status': 'Assigned'
         })
 
         fb_db.collection('users').document(tech_id).update({
@@ -144,17 +149,121 @@ def assign_technician(job_id):
 @app.route('/jobs_list')
 @login_required
 def jobs_list():
-    jobs_ref = fb_db.collection('jobs')
-    docs = jobs_ref.stream()
+    last_job_id = request.args.get('last_job_id')
 
-    jobs = [['Job Id', 'Title', 'Description', 'Created By', 'Job date', 'status', 'Assigned']]
+    jobs_ref = fb_db.collection('jobs').order_by('created_at', direction='DESCENDING')
+
+    if last_job_id:
+        last_doc = fb_db.collection('jobs').document(last_job_id).get()
+        if last_doc.exists:
+            jobs_ref = jobs_ref.start_after(last_doc)
+
+    docs = list(jobs_ref.stream())
+
+    active_jobs = fb_db.collection('jobs').where('status', 'in', ['Pending', 'Assigned']).stream()
+    busy_tech_ids = {doc.to_dict().get('assigned_to') for doc in active_jobs}
+
+    tech_docs = fb_db.collection('users').where('role', '==', 'Technician').stream()
+    available_technicians_map = {}
+    for tech in tech_docs:
+        data = tech.to_dict()
+        tech_id = tech.id
+        is_busy = tech_id in busy_tech_ids
+        status_label = "Busy" if is_busy else "Available"
+        available_technicians_map[tech_id] = {
+            'id': tech_id,
+            'name': data.get('username', data.get('email')),
+            'status_label': status_label
+        }
+
+    jobs = []
     for doc in docs:
         job = doc.to_dict()
-        job['job_id'] = doc.id
+        job_id = doc.id
 
-        jobs.append(job)
+        created_by_id = job.get('created_by')
+        created_by_name = "N/A"
+        if created_by_id:
+            user_doc = fb_db.collection('users').document(created_by_id).get()
+            if user_doc.exists:
+                created_by_name = user_doc.to_dict().get('username')
 
-    return render_template('jobs_list.html', jobs=jobs, title="Jobs")
+        assigned_to_id = job.get('assigned_to')
+        assigned_to = available_technicians_map.get(assigned_to_id) if assigned_to_id else None
+
+        job_date = job.get('job_date') or 'N/A'
+
+        jobs.append({
+            'job_id': job_id,
+            'title': job.get('title'),
+            'description': job.get('description'),
+            'created_by': created_by_name,
+            'job_date': job_date,
+            'status': job.get('status', 'N/A'),
+            'assigned_to': assigned_to
+        })
+
+    return render_template(
+        'jobs_list.html',
+        jobs=jobs,
+        title="Jobs",
+        available_technicians=list(available_technicians_map.values()),
+    )
+
+
+@app.route('/reassign-technician', methods=['POST'])
+@login_required
+def reassign_technician():
+    if current_user.role != 'Admin':
+        return "Forbidden", 403
+
+    job_id = request.form.get('job_id')
+    new_tech_id = request.form.get('assigned_to')
+
+    if job_id and new_tech_id:
+        fb_db.collection('jobs').document(job_id).update({
+            'assigned_to': new_tech_id,
+            'status': 'Assigned'
+        })
+        fb_db.collection('users').document(new_tech_id).update({
+            'tech_available': False
+        })
+        flash('Technician reassigned successfully', 'success')
+
+    return redirect(url_for('jobs_list'))
+
+
+@app.route('/job/<job_id>')
+@login_required
+def job_details(job_id):
+    job_doc = fb_db.collection('jobs').document(job_id).get()
+    if not job_doc.exists:
+        return render_template('errors/404.html'), 404
+
+    job = job_doc.to_dict()
+    job['job_id'] = job_id
+
+    # Fetch creator info
+    created_by = "N/A"
+    if job.get('created_by'):
+        user_doc = fb_db.collection('users').document(job['created_by']).get()
+        if user_doc.exists:
+            created_by = user_doc.to_dict().get('username')
+
+    # Fetch assigned technician info
+    assigned_to = "Unassigned"
+    if job.get('assigned_to'):
+        tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
+        if tech_doc.exists:
+            assigned_to = tech_doc.to_dict().get('username')
+
+    return render_template(
+        'job_details.html',
+        title="Job Details",
+        job=job,
+        created_by=created_by,
+        assigned_to=assigned_to
+    )
 
 
 @app.route('/jobs_list_client', methods=['GET'])

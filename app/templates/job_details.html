@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4 text-dark fw-bold">Job Details</h3>
+
+    <div class="card shadow-sm rounded border-0">
+        <div class="card-header purple-header">
+            <h5 class="mb-0 text-white">Job ID: {{ job.job_id }}</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-secondary">Title</dt>
+                <dd class="col-sm-8 fw-semibold">{{ job.title }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Description</dt>
+                <dd class="col-sm-8">{{ job.description }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Category</dt>
+                <dd class="col-sm-8">{{ job.job_category or 'N/A' }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Created By</dt>
+                <dd class="col-sm-8">{{ created_by }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Scheduled Date</dt>
+                <dd class="col-sm-8">{{ job.job_date or 'N/A' }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Scheduled Time</dt>
+                <dd class="col-sm-8">{{ job.job_time or 'N/A' }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Address</dt>
+                <dd class="col-sm-8">{{ job.address or 'N/A' }}</dd>
+
+                <dt class="col-sm-4 text-secondary">Status</dt>
+                <dd class="col-sm-8">
+                    <span class="badge bg-dark text-white">{{ job.status }}</span>
+                </dd>
+
+                <dt class="col-sm-4 text-secondary">Assigned Technician</dt>
+                <dd class="col-sm-8">{{ assigned_to }}</dd>
+            </dl>
+        </div>
+        <div class="card-footer bg-light text-end">
+            <a href="{{ url_for('jobs_list') }}" class="btn btn-purple">← Back to Job List</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
