@@ -20,9 +20,11 @@
             <tbody>
             {% for job in jobs %}
             <tr>
-                <td><a href="{{ url_for('job_details', job_id=job.job_id) }}">{{ job.job_id }}</a></td>
+                <td><a href="{{ url_for('job_details', job_id=job.job_id) }}">
+                    {{ job.job_id[:6] }}..
+                </a></td>
                 <td>{{ job.title }}</td>
-                <td>{{ job.description }}</td>
+                <td>{{ job.description[:50] }} </td>
                 <td>{{ job.created_by }}</td>
                 <td>{{ job.job_date }}</td>
                 <td>{{ job.status }}</td>
