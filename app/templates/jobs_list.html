@@ -14,7 +14,6 @@
                 <th>Job Date</th>
                 <th>Status</th>
                 <th>Assigned Technician</th>
-
             </tr>
             </thead>
             <tbody>
@@ -24,7 +23,7 @@
                     {{ job.job_id[:6] }}..
                 </a></td>
                 <td>{{ job.title }}</td>
-                <td>{{ job.description[:50] }} </td>
+                <td>{{ job.description[:50] }}</td>
                 <td>{{ job.created_by }}</td>
                 <td>{{ job.job_date }}</td>
                 <td>{{ job.status }}</td>
@@ -36,7 +35,7 @@
                             <option value="">Select Technician</option>
                             {% for tech in available_technicians %}
                             <option value="{{ tech.id }}"
-                                    {% if job.assigned_to and tech.id== job.assigned_to.id %}selected{% endif %}>
+                                    {% if job.assigned_to and tech.id == job.assigned_to.id %}selected{% endif %}>
                                 {{ tech.name }} ({{ tech.status_label }})
                             </option>
                             {% endfor %}
@@ -45,6 +44,26 @@
                     {% else %}
                     {{ job.assigned_to.name if job.assigned_to else 'Unassigned' }}
                     {% endif %}
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="7" class="bg-light">
+                    <strong>AI Technician Suggestions:</strong>
+                    <ul class="mb-0">
+                        {% for s in job.suggestions %}
+                        <li>
+                            {{ s.technician_name }} — Score: <strong>{{ s.score }}</strong> |
+                            Active Jobs: {{ s.active_jobs }} |
+                            Skills: {{ s.skills | join(", ") }}
+                            <form method="POST" action="{{ url_for('reassign_technician') }}" style="display:inline;">
+                                <input type="hidden" name="job_id" value="{{ job.job_id }}">
+                                <input type="hidden" name="assigned_to" value="{{ s.technician_id }}">
+                                <button class="btn btn-sm btn-primary ms-2">Assign</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </td>
             </tr>
             {% endfor %}
