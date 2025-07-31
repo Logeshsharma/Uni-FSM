@@ -1,5 +1,5 @@
 import uuid
-
+import os
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from google.cloud import firestore
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +9,18 @@ from app.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
 from app import fb_db
+import numpy as np
+import joblib
 
+# Load AI model and encoder at startup
+try:
+    model_path = os.path.join(os.path.dirname(__file__), "assign_model.pkl")
+    model, label_encoder = joblib.load(model_path)
+    print("AI model and label encoder loaded successfully")
+except Exception as e:
+    print(" Error loading model:", e)
+    model = None
+    label_encoder = None
 
 # Pending
 # Assigned
@@ -28,15 +39,30 @@ def add_user():
     email = data.get('email')
     password = generate_password_hash(data.get('password'))
     role = data.get('role')
+    skills = data.get('skills')
+    active_jobs = data.get('active_jobs')
 
-    doc_ref = fb_db.collection('users').document()
-    doc_ref.set({
+    user = {
         'username': username,
         'email': email,
         'password': password,
         'role': role,
         'tech_available': True if role == 'Technician' else None
-    })
+    }
+
+    if role == 'Technician':
+        if not isinstance(skills, list) or len(skills) == 0:
+            return jsonify({'status': 'error', 'message': 'Add your skills'}), 400
+
+        if active_jobs is None:
+            return jsonify({'status': 'error', 'message': 'Technicians must include active_jobs'}), 400
+
+        user['tech_available'] = True
+        user['skills'] = skills
+        user['active_jobs'] = active_jobs
+
+    doc_ref = fb_db.collection('users').document()
+    doc_ref.set(user)
 
     return jsonify({'status': 'User added successfully'}), 200
 
@@ -122,28 +148,90 @@ def create_job():
 
     return jsonify({"message": "Job created", "job_id": job_id})
 
-
 def assign_technician(job_id):
-    job_ref = fb_db.collection('jobs').document(job_id)
-    job = job_ref.get()
-    if not job.exists:
+    MAX_ACTIVE_JOBS = 2
+
+    job_ref = fb_db.collection("jobs").document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        # Job not found.
         return
 
-    available_techs = fb_db.collection('users').where('role', '==', 'Technician').where('tech_available', '==',
-                                                                                        True).limit(
-        1).stream()
+    job_data = job_doc.to_dict()
+    category = job_data.get("job_category")
 
-    for tech in available_techs:
-        tech_id = tech.id
+    if not category:
+        # No job category provided.
+        return
+
+    category_encoded = label_encoder.transform([category])[0]
+
+    tech_docs = fb_db.collection("users").where("role", "==", "Technician").stream()
+
+    best_score = -1
+    best_tech = None
+    best_tech_data = None
+    fallback_options = []
+
+    for tech_doc in tech_docs:
+        tech_data = tech_doc.to_dict()
+        tech_id = tech_doc.id
+        skills = tech_data.get("skills", [])
+        active_jobs = tech_data.get("active_jobs", 0)
+        skill_match = 1 if category in skills else 0
+
+        features = np.array([[category_encoded, skill_match, active_jobs]])
+        assign_prob = model.predict_proba(features)[0][1]
+
+        if skill_match:
+            fallback_options.append({
+                "technician_id": tech_id,
+                "username": tech_data.get("username"),
+                "score": round(assign_prob, 2),
+                "active_jobs": active_jobs,
+                "skills": skills
+            })
+
+        if skill_match and active_jobs < MAX_ACTIVE_JOBS and assign_prob > best_score:
+            best_score = assign_prob
+            best_tech = tech_id
+            best_tech_data = tech_data
+
+    if best_tech:
+        fresh_doc = fb_db.collection("users").document(best_tech).get()
+        fresh_data = fresh_doc.to_dict()
+        fresh_active_jobs = fresh_data.get("active_jobs", 0)
+
+        if fresh_active_jobs >= MAX_ACTIVE_JOBS:
+            best_tech = None  # Clear the assignment
+
+    if best_tech:
+
+        # Update job
         job_ref.update({
-            'assigned_to': tech_id,
-            'status': 'Assigned'
+            "assigned_to": best_tech,
+            "status": "Assigned"
         })
 
-        fb_db.collection('users').document(tech_id).update({
-            'tech_available': False
+        # Update technician
+        new_active_jobs = best_tech_data.get("active_jobs", 0) + 1
+        update_data = {
+            "active_jobs": new_active_jobs
+        }
+
+        if new_active_jobs >= MAX_ACTIVE_JOBS:
+            update_data["tech_available"] = False
+
+        fb_db.collection("users").document(best_tech).update(update_data)
+
+    else:
+        fallback_options = sorted(fallback_options, key=lambda x: x["score"], reverse=True)[:3]
+        print(fallback_options)
+        job_ref.update({
+            "assignment_suggestions": fallback_options,
+            "status": "Pending"
         })
-        break
 
 
 @app.route('/jobs_list')
@@ -193,14 +281,32 @@ def jobs_list():
 
         job_date = job.get('job_date') or 'N/A'
 
+        # Check for AI suggestions
+        suggestions = job.get('assignment_suggestions', [])
+
+        # Optional: enhance suggestions with technician name
+        enhanced_suggestions = []
+        for s in suggestions:
+            tech_id = s.get('technician_id')
+            tech_name = available_technicians_map.get(tech_id, {}).get('name', "Unknown")
+            enhanced_suggestions.append({
+                'technician_id': tech_id,
+                'technician_name': tech_name,
+                'score': s.get('score'),
+                'active_jobs': s.get('active_jobs'),
+                'skills': s.get('skills')
+            })
+
         jobs.append({
             'job_id': job_id,
             'title': job.get('title'),
+            'job_category': job.get('job_category'),
             'description': job.get('description'),
             'created_by': created_by_name,
             'job_date': job_date,
             'status': job.get('status', 'N/A'),
-            'assigned_to': assigned_to
+            'assigned_to': assigned_to,
+            'suggestions': enhanced_suggestions  # Add to context
         })
 
     return render_template(
@@ -243,14 +349,12 @@ def job_details(job_id):
     job = job_doc.to_dict()
     job['job_id'] = job_id
 
-    # Fetch creator info
     created_by = "N/A"
     if job.get('created_by'):
         user_doc = fb_db.collection('users').document(job['created_by']).get()
         if user_doc.exists:
             created_by = user_doc.to_dict().get('username')
 
-    # Fetch assigned technician info
     assigned_to = "Unassigned"
     if job.get('assigned_to'):
         tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
