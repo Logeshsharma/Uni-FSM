@@ -9,6 +9,7 @@
             <tr>
                 <th>Job ID</th>
                 <th>Title</th>
+                <th>Category</th>
                 <th>Description</th>
                 <th>Created By</th>
                 <th>Job Date</th>
@@ -23,6 +24,7 @@
                     {{ job.job_id[:6] }}..
                 </a></td>
                 <td>{{ job.title }}</td>
+                <td>{{ job.job_category }}</td>
                 <td>{{ job.description[:50] }}</td>
                 <td>{{ job.created_by }}</td>
                 <td>{{ job.job_date }}</td>
@@ -47,10 +49,11 @@
                 </td>
             </tr>
 
+            {% if job.status == 'Pending' and not job.assigned_to and job.suggestions %}
             <tr>
-                <td colspan="7" class="bg-light">
+                <td colspan="8" class="bg-light">
                     <strong>AI Technician Suggestions:</strong>
-                    <ul class="mb-0">
+                    <ul class="mb-0 ps-3">
                         {% for s in job.suggestions %}
                         <li>
                             {{ s.technician_name }} — Score: <strong>{{ s.score }}</strong> |
@@ -59,13 +62,14 @@
                             <form method="POST" action="{{ url_for('reassign_technician') }}" style="display:inline;">
                                 <input type="hidden" name="job_id" value="{{ job.job_id }}">
                                 <input type="hidden" name="assigned_to" value="{{ s.technician_id }}">
-                                <button class="btn btn-sm btn-primary ms-2">Assign</button>
+                                <button class="btn btn-sm btn-dark ms-2 mb-2">Assign</button>
                             </form>
                         </li>
                         {% endfor %}
                     </ul>
                 </td>
             </tr>
+            {% endif %}
             {% endfor %}
             </tbody>
         </table>

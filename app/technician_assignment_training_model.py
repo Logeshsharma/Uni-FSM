@@ -15,7 +15,6 @@ df["job_category_encoded"] = label_encoder.fit_transform(df["job_category"])
 X = df[["job_category_encoded", "skill_match", "active_jobs"]]
 y = df["assigned"]
 
-# Split for training/testing (optional)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Train Random Forest model
