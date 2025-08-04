@@ -14,7 +14,8 @@ import joblib
 
 # Load AI model and encoder at startup
 try:
-    model_path = os.path.join(os.path.dirname(__file__), "assign_model.pkl")
+    current_dir = os.path.dirname(__file__)
+    model_path = os.path.join(current_dir, "ai", "assign_model.pkl")
     model, label_encoder = joblib.load(model_path)
     print("AI model and label encoder loaded successfully")
 except Exception as e:
@@ -22,17 +23,38 @@ except Exception as e:
     model = None
     label_encoder = None
 
-# Pending
-# Assigned
-# On process
-# Completed
+@app.route('/mapi/update_password', methods=['POST'])
+def update_password():
+    data = request.get_json()
+
+    user_id = data.get('user_id')
+    new_password = data.get('new_password')
+
+    if not user_id or not new_password:
+        return jsonify({'error': 'user_id and new_password are required'}), 400
+
+    try:
+        user_ref = fb_db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+
+        hashed_password = generate_password_hash(new_password, method='pbkdf2:sha256')
+        user_ref.update({'password': hashed_password})
+
+        return jsonify({'message': 'Password updated successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route("/")
 def home():
     return redirect(url_for('jobs_list'))
 
 
-@app.route('/add_user', methods=['GET', 'POST'])
+@app.route('/mapi/add_user', methods=['GET', 'POST'])
 def add_user():
     data = request.get_json()
     username = data.get('username')
@@ -112,7 +134,7 @@ def login():
     return render_template('generic_form.html', title='Login', form=form)
 
 
-@app.route('/create_job', methods=['POST', 'GET'])
+@app.route('/mapi/create_job', methods=['POST', 'GET'])
 def create_job():
     user_id = request.json.get('user_id')
     title = request.json.get('title')
@@ -339,7 +361,7 @@ def reassign_technician():
     return redirect(url_for('jobs_list'))
 
 
-@app.route('/job/<job_id>')
+@app.route('/mapi/job/<job_id>')
 @login_required
 def job_details(job_id):
     job_doc = fb_db.collection('jobs').document(job_id).get()
@@ -370,7 +392,7 @@ def job_details(job_id):
     )
 
 
-@app.route('/jobs_list_client', methods=['GET'])
+@app.route('/mapi/jobs_list', methods=['GET'])
 def jobs_list_client():
     user_id = request.args.get('user_id')
     role = request.args.get('role')
@@ -419,7 +441,7 @@ def jobs_list_client():
     return jsonify(jobs)
 
 
-@app.route('/login_mobile', methods=['POST'])
+@app.route('/mapi/login', methods=['POST'])
 def login_mobile():
     username = request.json.get('username')
     password = request.json.get('password')
@@ -446,9 +468,53 @@ def login_mobile():
     }), 200
 
 
+@app.route('/mapi/job_detail', methods=['GET'])
+def api_job_detail():
+    job_id = request.args.get('job_id')
+    job_ref = fb_db.collection('jobs').document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        return jsonify({"error": "Job not found"}), 404
+
+    job = job_doc.to_dict()
+
+    created_by_info = {}
+    if job.get('created_by'):
+        creator_doc = fb_db.collection('users').document(job['created_by']).get()
+        if creator_doc.exists:
+            creator_data = creator_doc.to_dict()
+            created_by_info = {
+                "user_id": creator_doc.id,
+                "username": creator_data.get('username')
+            }
+
+    assigned_to_info = None
+    if job.get('assigned_to'):
+        tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
+        if tech_doc.exists:
+            tech_data = tech_doc.to_dict()
+            assigned_to_info = {
+                "user_id": tech_doc.id,
+                "username": tech_data.get('username')
+            }
+
+    return jsonify({
+        "job_id": job_id,
+        "title": job.get('title'),
+        "description": job.get('description'),
+        "status": job.get('status', 'N/A'),
+        "job_category": job.get('job_category'),
+        "job_date": job.get('job_date'),
+        "job_time": job.get('job_time'),
+        "address": job.get('address'),
+        "created_by": created_by_info,
+        "assigned_to": assigned_to_info
+    }), 200
+
+
 @app.route('/logout')
 def logout():
-    # Endpoint for logging the current user out
     logout_user()
     return redirect(url_for('login'))
 

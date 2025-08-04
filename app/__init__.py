@@ -4,7 +4,6 @@ import os
 from flask import Flask
 from config import Config
 from jinja2 import StrictUndefined
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 import firebase_admin
 from firebase_admin import credentials
@@ -14,7 +13,6 @@ from firebase_admin import firestore
 app = Flask(__name__)
 app.jinja_env.undefined = StrictUndefined
 app.config.from_object(Config)
-db = SQLAlchemy(app)
 
 login = LoginManager(app)
 login.init_app(app)
@@ -31,4 +29,4 @@ firebase_app = firebase_admin.initialize_app(cred)
 
 fb_db = firestore.client()
 
-from app import views, models
+from app import views, models, jobs
