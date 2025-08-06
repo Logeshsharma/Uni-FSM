@@ -8,12 +8,15 @@ from flask_login import LoginManager
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from dotenv import load_dotenv
+
+
 
 
 app = Flask(__name__)
 app.jinja_env.undefined = StrictUndefined
 app.config.from_object(Config)
-
+load_dotenv()
 login = LoginManager(app)
 login.init_app(app)
 login.login_view = 'login'
