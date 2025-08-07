@@ -22,6 +22,10 @@ S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
 
 @app.route('/mapi/upload_image', methods=['POST'])
 def upload_image():
+    print("S3_BUCKET:", S3_BUCKET)
+    print("S3_REGION:", S3_REGION)
+    print("S3_ACCESS_KEY:", S3_ACCESS_KEY)
+    print("S3_SECRET_KEY:", S3_SECRET_KEY)
 
     # S3 client
     s3 = boto3.client(
