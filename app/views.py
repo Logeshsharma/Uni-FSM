@@ -23,6 +23,7 @@ except Exception as e:
     model = None
     label_encoder = None
 
+
 @app.route('/mapi/update_password', methods=['POST'])
 def update_password():
     data = request.get_json()
@@ -169,6 +170,7 @@ def create_job():
     assign_technician(job_id)
 
     return jsonify({"message": "Job created", "job_id": job_id})
+
 
 def assign_technician(job_id):
     MAX_ACTIVE_JOBS = 2
@@ -361,37 +363,6 @@ def reassign_technician():
     return redirect(url_for('jobs_list'))
 
 
-@app.route('/mapi/job/<job_id>')
-@login_required
-def job_details(job_id):
-    job_doc = fb_db.collection('jobs').document(job_id).get()
-    if not job_doc.exists:
-        return render_template('errors/404.html'), 404
-
-    job = job_doc.to_dict()
-    job['job_id'] = job_id
-
-    created_by = "N/A"
-    if job.get('created_by'):
-        user_doc = fb_db.collection('users').document(job['created_by']).get()
-        if user_doc.exists:
-            created_by = user_doc.to_dict().get('username')
-
-    assigned_to = "Unassigned"
-    if job.get('assigned_to'):
-        tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
-        if tech_doc.exists:
-            assigned_to = tech_doc.to_dict().get('username')
-
-    return render_template(
-        'job_details.html',
-        title="Job Details",
-        job=job,
-        created_by=created_by,
-        assigned_to=assigned_to
-    )
-
-
 @app.route('/mapi/jobs_list', methods=['GET'])
 def jobs_list_client():
     user_id = request.args.get('user_id')
@@ -468,49 +439,41 @@ def login_mobile():
     }), 200
 
 
-@app.route('/mapi/job_detail', methods=['GET'])
-def api_job_detail():
-    job_id = request.args.get('job_id')
-    job_ref = fb_db.collection('jobs').document(job_id)
-    job_doc = job_ref.get()
-
+@app.route('/mapi/job/<job_id>')
+@login_required
+def job_details(job_id):
+    job_doc = fb_db.collection('jobs').document(job_id).get()
     if not job_doc.exists:
-        return jsonify({"error": "Job not found"}), 404
+        return render_template('errors/404.html'), 404
 
     job = job_doc.to_dict()
+    job['job_id'] = job_id
 
-    created_by_info = {}
+    job['before_image_uploaded'] = job.get('before_image_uploaded', False)
+    job['after_image_uploaded'] = job.get('after_image_uploaded', False)
+    job['before_images'] = job.get('images', {}).get('before', [])
+    job['after_images'] = job.get('images', {}).get('after', [])
+
+    created_by = "N/A"
     if job.get('created_by'):
-        creator_doc = fb_db.collection('users').document(job['created_by']).get()
-        if creator_doc.exists:
-            creator_data = creator_doc.to_dict()
-            created_by_info = {
-                "user_id": creator_doc.id,
-                "username": creator_data.get('username')
-            }
+        user_doc = fb_db.collection('users').document(job['created_by']).get()
+        if user_doc.exists:
+            created_by = user_doc.to_dict().get('username')
 
-    assigned_to_info = None
+    # Get assigned technician username
+    assigned_to = "Unassigned"
     if job.get('assigned_to'):
         tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
         if tech_doc.exists:
-            tech_data = tech_doc.to_dict()
-            assigned_to_info = {
-                "user_id": tech_doc.id,
-                "username": tech_data.get('username')
-            }
+            assigned_to = tech_doc.to_dict().get('username')
 
-    return jsonify({
-        "job_id": job_id,
-        "title": job.get('title'),
-        "description": job.get('description'),
-        "status": job.get('status', 'N/A'),
-        "job_category": job.get('job_category'),
-        "job_date": job.get('job_date'),
-        "job_time": job.get('job_time'),
-        "address": job.get('address'),
-        "created_by": created_by_info,
-        "assigned_to": assigned_to_info
-    }), 200
+    return render_template(
+        'job_details.html',
+        title="Job Details",
+        job=job,
+        created_by=created_by,
+        assigned_to=assigned_to
+    )
 
 
 @app.route('/logout')
