@@ -22,10 +22,6 @@ S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
 
 @app.route('/mapi/upload_image', methods=['POST'])
 def upload_image():
-    print("S3_BUCKET:", S3_BUCKET)
-    print("S3_REGION:", S3_REGION)
-    print("S3_ACCESS_KEY:", S3_ACCESS_KEY)
-    print("S3_SECRET_KEY:", S3_SECRET_KEY)
 
     # S3 client
     s3 = boto3.client(
@@ -61,12 +57,13 @@ def upload_image():
     for file in files:
         ext = os.path.splitext(file.filename)[1]
         unique_filename = f"jobs/{job_id}/{image_type}/{uuid.uuid4()}{ext}"
+        print(f"Detected content type: {file.content_type}")
 
         s3.upload_fileobj(
             file,
             S3_BUCKET,
             unique_filename,
-            ExtraArgs={'ContentType': file.content_type,}
+            ExtraArgs={'ContentType': file.content_type or 'application/octet-stream'}
         )
 
         public_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{unique_filename}"
