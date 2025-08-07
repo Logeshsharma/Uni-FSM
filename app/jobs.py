@@ -1,7 +1,8 @@
 import os
 import uuid
 
-from flask import request, jsonify
+from flask import request, jsonify, render_template
+from flask_login import login_required
 from google.cloud import firestore
 
 from app import app
@@ -20,17 +21,74 @@ S3_REGION = os.getenv("S3_REGION")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
 
+# S3 client
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=S3_ACCESS_KEY,
+    aws_secret_access_key=S3_SECRET_KEY,
+    region_name=S3_REGION
+)
+
+@app.route('/mapi/job_detail', methods=['GET'])
+def api_job_detail():
+    job_id = request.args.get('job_id')
+    if not job_id:
+        return jsonify({"error": "Missing job_id"}), 400
+
+    job_ref = fb_db.collection('jobs').document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        return jsonify({"error": "Job not found"}), 404
+
+    job = job_doc.to_dict()
+
+    created_by_info = {}
+    if job.get('created_by'):
+        creator_doc = fb_db.collection('users').document(job['created_by']).get()
+        if creator_doc.exists:
+            creator_data = creator_doc.to_dict()
+            created_by_info = {
+                "user_id": creator_doc.id,
+                "username": creator_data.get('username')
+            }
+
+    assigned_to_info = None
+    if job.get('assigned_to'):
+        tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
+        if tech_doc.exists:
+            tech_data = tech_doc.to_dict()
+            assigned_to_info = {
+                "user_id": tech_doc.id,
+                "username": tech_data.get('username')
+            }
+
+    images = job.get('images', {})
+    before_images = images.get('before', [])
+    after_images = images.get('after', [])
+    before_uploaded = job.get('before_image_uploaded', False)
+    after_uploaded = job.get('after_image_uploaded', False)
+
+    return jsonify({
+        "job_id": job_id,
+        "title": job.get('title'),
+        "description": job.get('description'),
+        "status": job.get('status', 'N/A'),
+        "job_category": job.get('job_category'),
+        "job_date": job.get('job_date'),
+        "job_time": job.get('job_time'),
+        "address": job.get('address'),
+        "created_by": created_by_info,
+        "assigned_to": assigned_to_info,
+        "before_images": before_images,
+        "after_images": after_images,
+        "before_image_uploaded": before_uploaded,
+        "after_image_uploaded": after_uploaded
+    }), 200
+
+
 @app.route('/mapi/upload_image', methods=['POST'])
 def upload_image():
-
-    # S3 client
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id=S3_ACCESS_KEY,
-        aws_secret_access_key=S3_SECRET_KEY,
-        region_name=S3_REGION
-    )
-
     job_id = request.form.get('job_id')
     image_type = request.form.get('type')  # 'before' or 'after'
     technician_id = request.form.get('technician_id')  # Optional
@@ -57,7 +115,6 @@ def upload_image():
     for file in files:
         ext = os.path.splitext(file.filename)[1]
         unique_filename = f"jobs/{job_id}/{image_type}/{uuid.uuid4()}{ext}"
-        print(f"Detected content type: {file.content_type}")
 
         s3.upload_fileobj(
             file,
@@ -69,7 +126,6 @@ def upload_image():
         public_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{unique_filename}"
         uploaded_urls.append(public_url)
 
-    # Update Firestore
     image_field = f"images.{image_type}"
     fb_db.collection('jobs').document(job_id).update({
         image_field: firestore.ArrayUnion(uploaded_urls),

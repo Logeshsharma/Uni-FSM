@@ -38,6 +38,33 @@
 
                 <dt class="col-sm-4 text-secondary">Assigned Technician</dt>
                 <dd class="col-sm-8">{{ assigned_to }}</dd>
+                <div class="row mt-4">
+                    {% if job.before_image_uploaded %}
+                    <div class="col-md-6">
+                        <p class="fw-semibold fs-5 mb-3">Before Images:</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for img_url in job.before_images %}
+                            <img src="{{ img_url }}" alt="Before Image"
+                                 style="max-width: 100%; border-radius: 10px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 200px;">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if job.after_image_uploaded %}
+                    <div class="col-md-6 border-start ps-4">
+                        <p class="fw-semibold fs-5 mb-3">After Images:</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for img_url in job.after_images %}
+                            <img src="{{ img_url }}" alt="After Image"
+                                 style="max-width: 100%; border-radius: 10px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 200px;">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+
             </dl>
         </div>
         <div class="card-footer bg-light text-end">
