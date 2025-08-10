@@ -9,22 +9,24 @@
     border-top: 3px solid #AC9BF8;
 }
 
+/* Prevent table from shrinking too much on small screens */
 #jobsTable {
+    min-width: 900px; /* ensures horizontal scroll if needed */
     border-collapse: separate;
     border-spacing: 0 6px; /* space between rows */
 }
 
 #jobsTable th,
 #jobsTable td {
-    padding: 14px 18px; /* Larger padding for airy layout */
+    padding: 14px 18px; /* airy layout */
     vertical-align: middle;
-    font-size: 0.92rem; /* Slightly smaller for dense data */
-    white-space: normal; /* Allow wrapping */
-    word-break: break-word;
+    font-size: 0.92rem;
+    white-space: normal;  /* wrap words naturally */
+    word-break: normal;   /* don't break inside words */
 }
 
 #jobsTable tbody tr {
-    height: auto; /* flexible for content */
+    height: auto;
     border-radius: 6px;
 }
 
@@ -32,7 +34,7 @@
 #jobsTable tbody tr:nth-child(odd) { background-color: #F8F6FF; }
 #jobsTable tbody tr:nth-child(even) { background-color: #FFFFFF; }
 
-/* Key columns with background highlight */
+/* Highlight key columns */
 #jobsTable td:first-child,
 #jobsTable td:nth-child(7),
 #jobsTable td:last-child {
@@ -40,7 +42,7 @@
     font-weight: 600;
 }
 
-/* Vertical column borders */
+/* Vertical borders */
 #jobsTable td, #jobsTable th { border-right: 1px solid #E5DAFB; }
 #jobsTable td:last-child, #jobsTable th:last-child { border-right: none; }
 
@@ -120,7 +122,7 @@
     padding-bottom: 6px;
 }
 
-/* ========= PAGINATION THEME ========= */
+/* ========= PAGINATION ========= */
 .pagination .page-item .page-link {
     color: #3E2077;
     border: 1px solid #AC9BF8;
@@ -232,7 +234,7 @@
     <div id="pagination" class="mt-4 d-flex justify-content-center"></div>
 </div>
 
-<!-- Client-side pagination script -->
+<!-- Client-side pagination -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const rowsPerPage = 5;
@@ -240,6 +242,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const allRows = Array.from(tbody.querySelectorAll("tr"));
     const pagination = document.getElementById("pagination");
 
+    // Group rows with suggestions
     let groupedRows = [];
     for (let i = 0; i < allRows.length; i++) {
         let group = [allRows[i]];
@@ -257,11 +260,9 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPage = page;
         const start = (page - 1) * rowsPerPage;
         const end = start + rowsPerPage;
-
         groupedRows.forEach((group, index) => {
             group.forEach(row => row.style.display = (index >= start && index < end) ? "" : "none");
         });
-
         renderPagination();
     }
 
@@ -269,7 +270,6 @@ document.addEventListener("DOMContentLoaded", function () {
         pagination.innerHTML = "";
         const ul = document.createElement("ul");
         ul.className = "pagination";
-
         for (let i = 1; i <= totalPages; i++) {
             const li = document.createElement("li");
             li.className = `page-item ${i === currentPage ? "active" : ""}`;
