@@ -1,78 +1,289 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* ========= TABLE THEME & SPACING ========= */
+.table-header-custom {
+    background-color: #3E2077 !important;
+    color: #fff !important;
+    border-top: 3px solid #AC9BF8;
+}
+
+#jobsTable {
+    border-collapse: separate;
+    border-spacing: 0 6px; /* space between rows */
+}
+
+#jobsTable th,
+#jobsTable td {
+    padding: 14px 18px; /* Larger padding for airy layout */
+    vertical-align: middle;
+    font-size: 0.92rem; /* Slightly smaller for dense data */
+    white-space: normal; /* Allow wrapping */
+    word-break: break-word;
+}
+
+#jobsTable tbody tr {
+    height: auto; /* flexible for content */
+    border-radius: 6px;
+}
+
+/* Alternate row colors */
+#jobsTable tbody tr:nth-child(odd) { background-color: #F8F6FF; }
+#jobsTable tbody tr:nth-child(even) { background-color: #FFFFFF; }
+
+/* Key columns with background highlight */
+#jobsTable td:first-child,
+#jobsTable td:nth-child(7),
+#jobsTable td:last-child {
+    background-color: #EDE8FF;
+    font-weight: 600;
+}
+
+/* Vertical column borders */
+#jobsTable td, #jobsTable th { border-right: 1px solid #E5DAFB; }
+#jobsTable td:last-child, #jobsTable th:last-child { border-right: none; }
+
+/* Links in table */
+#jobsTable a.text-accent {
+    padding: 3px 6px;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+#jobsTable a.text-accent:hover {
+    background-color: #AC9BF8;
+    color: #1B0E4A !important;
+}
+
+/* Category badge */
+.badge.bg-accent {
+    font-size: 0.85em;
+    padding: 5px 8px;
+}
+
+/* ========= STATUS BADGES ========= */
+.status-pending {
+    background-color: #BFA6FF !important;
+    color: #2D1B59 !important;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+.status-assigned {
+    background-color: #361A75 !important;
+    color: #FFFFFF !important;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+.status-completed {
+    background-color: #59C18D !important;
+    color: #0F4624 !important;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+.status-default {
+    background-color: #6C757D !important;
+    color: #FFFFFF !important;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+
+/* ========= SECTION HEADING ========= */
+.section-heading {
+    color: #3E2077 !important;
+    border-bottom: 3px solid #AC9BF8;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+/* Suggestions row */
+.suggestions-row td {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Buttons */
+.btn-purple {
+    background-color: #AC9BF8 !important;
+    color: #3E2077 !important;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+.btn-purple:hover {
+    background-color: #C7B7F9 !important;
+    color: #3E2077 !important;
+}
+
+/* Dropdowns */
+.form-select-sm {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+/* ========= PAGINATION THEME ========= */
+.pagination .page-item .page-link {
+    color: #3E2077;
+    border: 1px solid #AC9BF8;
+    background-color: #fff;
+    margin: 0 2px;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+.pagination .page-item .page-link:hover {
+    background-color: #AC9BF8;
+    color: #3E2077;
+}
+.pagination .page-item.active .page-link {
+    background-color: #3E2077 !important;
+    border-color: #3E2077 !important;
+    color: #fff !important;
+}
+</style>
+
 <div class="container mt-4">
-    <h3 class="mb-3">All Jobs</h3>
-    <div class="table-responsive rounded overflow-hidden shadow-sm">
-        <table class="table table-bordered table-striped mb-0 align-middle">
-            <thead class="table-dark">
-            <tr>
-                <th>Job ID</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Created By</th>
-                <th>Job Date</th>
-                <th>Status</th>
-                <th>Assigned Technician</th>
-            </tr>
+    <h3 class="fw-bold section-heading">All Jobs</h3>
+
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table align-middle mb-0" id="jobsTable">
+            <thead class="table-header-custom">
+                <tr>
+                    <th>Job ID</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Created By</th>
+                    <th>Job Date</th>
+                    <th>Status</th>
+                    <th>Assigned Technician</th>
+                </tr>
             </thead>
             <tbody>
-            {% for job in jobs %}
-            <tr>
-                <td><a href="{{ url_for('job_details', job_id=job.job_id) }}">
-                    {{ job.job_id[:6] }}..
-                </a></td>
-                <td>{{ job.title }}</td>
-                <td>{{ job.job_category }}</td>
-                <td>{{ job.description[:50] }}</td>
-                <td>{{ job.created_by }}</td>
-                <td>{{ job.job_date }}</td>
-                <td>{{ job.status }}</td>
-                <td>
-                    {% if current_user.role == 'Admin' %}
-                    <form method="POST" action="{{ url_for('reassign_technician') }}">
-                        <input type="hidden" name="job_id" value="{{ job.job_id }}">
-                        <select name="assigned_to" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">Select Technician</option>
-                            {% for tech in available_technicians %}
-                            <option value="{{ tech.id }}"
+                {% for job in jobs %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('job_details', job_id=job.job_id) }}"
+                           class="text-decoration-none fw-semibold text-accent">
+                            {{ job.job_id[:6] }}..
+                        </a>
+                    </td>
+                    <td>{{ job.title }}</td>
+                    <td><span class="badge bg-accent">{{ job.job_category }}</span></td>
+                    <td>{{ job.description }}</td>
+                    <td>{{ job.created_by }}</td>
+                    <td>{{ job.job_date }}</td>
+                    <td>
+                        <span class="badge
+                            {% if job.status == 'Pending' %}status-pending
+                            {% elif job.status == 'Assigned' %}status-assigned
+                            {% elif job.status == 'Completed' %}status-completed
+                            {% else %}status-default{% endif %}">
+                            {{ job.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if current_user.role == 'Admin' %}
+                        <form method="POST" action="{{ url_for('reassign_technician') }}">
+                            <input type="hidden" name="job_id" value="{{ job.job_id }}">
+                            <select name="assigned_to" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="">Select Technician</option>
+                                {% for tech in available_technicians %}
+                                <option value="{{ tech.id }}"
                                     {% if job.assigned_to and tech.id == job.assigned_to.id %}selected{% endif %}>
-                                {{ tech.name }} ({{ tech.status_label }})
-                            </option>
+                                    {{ tech.name }} ({{ tech.status_label }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        {% else %}
+                        {{ job.assigned_to.name if job.assigned_to else 'Unassigned' }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if job.status == 'Pending' and not job.assigned_to and job.suggestions %}
+                <tr class="suggestions-row">
+                    <td colspan="8" class="bg-light p-3 border-start border-end border-bottom">
+                        <strong class="text-dark">AI Technician Suggestions:</strong>
+                        <ul class="list-unstyled mt-2 mb-0">
+                            {% for s in job.suggestions %}
+                            <li class="d-flex align-items-center mb-2">
+                                <div>
+                                    <span class="fw-semibold">{{ s.technician_name }}</span> —
+                                    Score: <strong>{{ s.score }}</strong> |
+                                    Active Jobs: {{ s.active_jobs }} |
+                                    Skills: <em>{{ s.skills | join(", ") }}</em>
+                                </div>
+                                <form method="POST" action="{{ url_for('reassign_technician') }}" class="ms-auto">
+                                    <input type="hidden" name="job_id" value="{{ job.job_id }}">
+                                    <input type="hidden" name="assigned_to" value="{{ s.technician_id }}">
+                                    <button class="btn btn-sm btn-purple">Assign</button>
+                                </form>
+                            </li>
                             {% endfor %}
-                        </select>
-                    </form>
-                    {% else %}
-                    {{ job.assigned_to.name if job.assigned_to else 'Unassigned' }}
-                    {% endif %}
-                </td>
-            </tr>
-
-            {% if job.status == 'Pending' and not job.assigned_to and job.suggestions %}
-            <tr>
-                <td colspan="8" class="bg-light">
-                    <strong>AI Technician Suggestions:</strong>
-                    <ul class="mb-0 ps-3">
-                        {% for s in job.suggestions %}
-                        <li>
-                            {{ s.technician_name }} — Score: <strong>{{ s.score }}</strong> |
-                            Active Jobs: {{ s.active_jobs }} |
-                            Skills: {{ s.skills | join(", ") }}
-                            <form method="POST" action="{{ url_for('reassign_technician') }}" style="display:inline;">
-                                <input type="hidden" name="job_id" value="{{ job.job_id }}">
-                                <input type="hidden" name="assigned_to" value="{{ s.technician_id }}">
-                                <button class="btn btn-sm btn-dark ms-2 mb-2">Assign</button>
-                            </form>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination controls -->
+    <div id="pagination" class="mt-4 d-flex justify-content-center"></div>
 </div>
+
+<!-- Client-side pagination script -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const rowsPerPage = 5;
+    const tbody = document.getElementById("jobsTable").querySelector("tbody");
+    const allRows = Array.from(tbody.querySelectorAll("tr"));
+    const pagination = document.getElementById("pagination");
+
+    let groupedRows = [];
+    for (let i = 0; i < allRows.length; i++) {
+        let group = [allRows[i]];
+        if (allRows[i + 1] && allRows[i + 1].classList.contains("suggestions-row")) {
+            group.push(allRows[i + 1]);
+            i++;
+        }
+        groupedRows.push(group);
+    }
+
+    const totalPages = Math.ceil(groupedRows.length / rowsPerPage);
+    let currentPage = 1;
+
+    function displayPage(page) {
+        currentPage = page;
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        groupedRows.forEach((group, index) => {
+            group.forEach(row => row.style.display = (index >= start && index < end) ? "" : "none");
+        });
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        pagination.innerHTML = "";
+        const ul = document.createElement("ul");
+        ul.className = "pagination";
+
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement("li");
+            li.className = `page-item ${i === currentPage ? "active" : ""}`;
+            li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            li.addEventListener("click", e => {
+                e.preventDefault();
+                displayPage(i);
+            });
+            ul.appendChild(li);
+        }
+        pagination.appendChild(ul);
+    }
+
+    displayPage(1);
+});
+</script>
 {% endblock %}

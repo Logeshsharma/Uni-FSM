@@ -166,7 +166,6 @@ def upload_image():
     })
 
 
-
 @app.route('/mapi/complete_job', methods=['POST'])
 def complete_job():
     data = request.json
