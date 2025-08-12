@@ -164,7 +164,10 @@ def create_job():
         'job_date': job_date,
         'job_time': job_time,
         'address': address,
-        'created_at': firestore.SERVER_TIMESTAMP
+        'tech_complete': False,
+        'student_closed': False,
+        'created_at': firestore.SERVER_TIMESTAMP,
+        "closed_at": None,
     })
 
     assign_technician(job_id)

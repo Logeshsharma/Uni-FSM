@@ -28,6 +28,7 @@ s3 = boto3.client(
     region_name=S3_REGION
 )
 
+
 @app.route('/mapi/job_detail', methods=['GET'])
 def api_job_detail():
     job_id = request.args.get('job_id')
@@ -67,6 +68,7 @@ def api_job_detail():
     after_images = images.get('after', [])
     before_uploaded = job.get('before_image_uploaded', False)
     after_uploaded = job.get('after_image_uploaded', False)
+    tech_complete = job.get('tech_complete', False)
 
     return jsonify({
         "job_id": job_id,
@@ -82,7 +84,8 @@ def api_job_detail():
         "before_images": before_images,
         "after_images": after_images,
         "before_image_uploaded": before_uploaded,
-        "after_image_uploaded": after_uploaded
+        "after_image_uploaded": after_uploaded,
+        "tech_complete": tech_complete,
     }), 200
 
 
@@ -166,7 +169,6 @@ def upload_image():
     })
 
 
-
 @app.route('/mapi/complete_job', methods=['POST'])
 def complete_job():
     data = request.json
@@ -188,7 +190,40 @@ def complete_job():
 
     job_ref.update({
         'status': 'Completed',
+        'tech_complete': True,
         'completed_at': firestore.SERVER_TIMESTAMP
     })
 
     return jsonify({'message': 'Job marked as completed'})
+
+
+@app.route('/mapi/close_job', methods=['POST'])
+def close_job():
+    data = request.json
+    job_id = data.get('job_id')
+    student_id = data.get('student_id')
+
+    if not job_id or not student_id:
+        return jsonify({"error": "Missing job_id or student_id"}), 400
+
+    job_ref = fb_db.collection('jobs').document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        return jsonify({"error": "Job not found"}), 404
+
+    job_data = job_doc.to_dict()
+
+    if job_data.get('created_by') != student_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if not job_data.get('tech_complete'):
+        return jsonify({"error": "Technician has not completed the job yet"}), 400
+
+    job_ref.update({
+        "student_closed": True,
+        "status": "Closed",
+        "closed_at": firestore.SERVER_TIMESTAMP
+    })
+
+    return jsonify({"message": "Job closed successfully"}), 200
