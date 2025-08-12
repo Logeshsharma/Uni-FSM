@@ -5,19 +5,38 @@
     <h3 class="mb-4 text-dark fw-bold">Job Details</h3>
 
     <div class="card shadow-sm rounded border-0">
-        <div class="card-header purple-header">
-            <h5 class="mb-0 text-white">Job ID: {{ job.job_id }}</h5>
+        <div class="card-header purple-header text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white">Job ID: <span class="fw-semibold">{{ job.job_id }}</span></h5>
+
         </div>
+
         <div class="card-body">
-            <dl class="row mb-0">
+            <dl class="row">
                 <dt class="col-sm-4 text-secondary">Title</dt>
                 <dd class="col-sm-8 fw-semibold">{{ job.title }}</dd>
 
                 <dt class="col-sm-4 text-secondary">Description</dt>
                 <dd class="col-sm-8">{{ job.description }}</dd>
 
+                <dt>Status</dt>
+                <dd>
+                    <span class="badge
+                {% if job.status == 'Pending' %}bg-warning
+                {% elif job.status == 'Assigned' %}bg-info
+                {% elif job.status == 'Completed' %}bg-success
+                {% else %}bg-secondary{% endif %} text-white">
+                {{ job.status }}
+                </span>
+                </dd>
+
                 <dt class="col-sm-4 text-secondary">Category</dt>
-                <dd class="col-sm-8">{{ job.job_category or 'N/A' }}</dd>
+                <dd class="col-sm-8">
+                    {% if job.job_category %}
+                    <span class="badge bg-primary">{{ job.job_category }}</span>
+                    {% else %}
+                    <span class="text-muted">N/A</span>
+                    {% endif %}
+                </dd>
 
                 <dt class="col-sm-4 text-secondary">Created By</dt>
                 <dd class="col-sm-8">{{ created_by }}</dd>
@@ -31,44 +50,49 @@
                 <dt class="col-sm-4 text-secondary">Address</dt>
                 <dd class="col-sm-8">{{ job.address or 'N/A' }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Status</dt>
-                <dd class="col-sm-8">
-                    <span class="badge bg-dark text-white">{{ job.status }}</span>
-                </dd>
-
                 <dt class="col-sm-4 text-secondary">Assigned Technician</dt>
-                <dd class="col-sm-8">{{ assigned_to }}</dd>
-                <div class="row mt-4">
-                    {% if job.before_image_uploaded %}
-                    <div class="col-md-6">
-                        <p class="fw-semibold fs-5 mb-3">Before Images:</p>
-                        <div class="d-flex flex-wrap gap-3">
-                            {% for img_url in job.before_images %}
-                            <img src="{{ img_url }}" alt="Before Image"
-                                 style="max-width: 100%; border-radius: 10px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 200px;">
-                            {% endfor %}
-                        </div>
-                    </div>
+                <dd class="col-sm-8">
+                    {% if assigned_to %}
+                    <span class="fw-semibold">{{ assigned_to }}</span>
+                    {% else %}
+                    <span class="text-muted">Unassigned</span>
                     {% endif %}
-
-                    {% if job.after_image_uploaded %}
-                    <div class="col-md-6 border-start ps-4">
-                        <p class="fw-semibold fs-5 mb-3">After Images:</p>
-                        <div class="d-flex flex-wrap gap-3">
-                            {% for img_url in job.after_images %}
-                            <img src="{{ img_url }}" alt="After Image"
-                                 style="max-width: 100%; border-radius: 10px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 200px;">
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-
-
+                </dd>
             </dl>
+
+            <div class="row mt-4">
+                {% if job.before_image_uploaded %}
+                <div class="col-md-6 mb-4">
+                    <h5 class="fw-semibold text-secondary mb-3">Before Images</h5>
+                    <div class="d-flex flex-wrap gap-3">
+                        {% for img_url in job.before_images %}
+                        <img src="{{ img_url }}" alt="Before Image"
+                             class="img-thumbnail shadow-sm"
+                             style="max-height: 180px; border-radius: 8px;">
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if job.after_image_uploaded %}
+                <div class="col-md-6 mb-4">
+                    <h5 class="fw-semibold text-secondary mb-3">After Images</h5>
+                    <div class="d-flex flex-wrap gap-3">
+                        {% for img_url in job.after_images %}
+                        <img src="{{ img_url }}" alt="After Image"
+                             class="img-thumbnail shadow-sm"
+                             style="max-height: 180px; border-radius: 8px;">
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
+
         <div class="card-footer bg-light text-end">
-            <a href="{{ url_for('jobs_list') }}" class="btn btn-purple">← Back to Job List</a>
+            <a href="{{ url_for('jobs_list') }}" class="btn btn-purple">
+                ← Back to Job List
+            </a>
         </div>
     </div>
 </div>
