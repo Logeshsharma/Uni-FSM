@@ -1,4 +1,3 @@
-
 import os
 import uuid
 
@@ -28,6 +27,7 @@ s3 = boto3.client(
     aws_secret_access_key=S3_SECRET_KEY,
     region_name=S3_REGION
 )
+
 
 @app.route('/mapi/job_detail', methods=['GET'])
 def api_job_detail():
@@ -85,7 +85,7 @@ def api_job_detail():
         "after_images": after_images,
         "before_image_uploaded": before_uploaded,
         "after_image_uploaded": after_uploaded,
-        "tech_complete" :tech_complete,
+        "tech_complete": tech_complete,
     }), 200
 
 
@@ -195,3 +195,35 @@ def complete_job():
     })
 
     return jsonify({'message': 'Job marked as completed'})
+
+
+@app.route('/mapi/close_job', methods=['POST'])
+def close_job():
+    data = request.json
+    job_id = data.get('job_id')
+    student_id = data.get('student_id')
+
+    if not job_id or not student_id:
+        return jsonify({"error": "Missing job_id or student_id"}), 400
+
+    job_ref = fb_db.collection('jobs').document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        return jsonify({"error": "Job not found"}), 404
+
+    job_data = job_doc.to_dict()
+
+    if job_data.get('created_by') != student_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if not job_data.get('tech_complete'):
+        return jsonify({"error": "Technician has not completed the job yet"}), 400
+
+    job_ref.update({
+        "student_closed": True,
+        "status": "Closed",
+        "closed_at": firestore.SERVER_TIMESTAMP
+    })
+
+    return jsonify({"message": "Job closed successfully"}), 200
