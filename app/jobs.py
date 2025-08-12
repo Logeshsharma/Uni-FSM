@@ -1,3 +1,4 @@
+
 import os
 import uuid
 
@@ -67,6 +68,7 @@ def api_job_detail():
     after_images = images.get('after', [])
     before_uploaded = job.get('before_image_uploaded', False)
     after_uploaded = job.get('after_image_uploaded', False)
+    tech_complete = job.get('tech_complete', False)
 
     return jsonify({
         "job_id": job_id,
@@ -82,7 +84,8 @@ def api_job_detail():
         "before_images": before_images,
         "after_images": after_images,
         "before_image_uploaded": before_uploaded,
-        "after_image_uploaded": after_uploaded
+        "after_image_uploaded": after_uploaded,
+        "tech_complete" :tech_complete,
     }), 200
 
 
@@ -166,7 +169,6 @@ def upload_image():
     })
 
 
-
 @app.route('/mapi/complete_job', methods=['POST'])
 def complete_job():
     data = request.json
@@ -188,6 +190,7 @@ def complete_job():
 
     job_ref.update({
         'status': 'Completed',
+        'tech_complete': True,
         'completed_at': firestore.SERVER_TIMESTAMP
     })
 

@@ -164,6 +164,7 @@ def create_job():
         'job_date': job_date,
         'job_time': job_time,
         'address': address,
+        'tech_complete': False,
         'created_at': firestore.SERVER_TIMESTAMP
     })
 
