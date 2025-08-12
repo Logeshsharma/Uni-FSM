@@ -10,50 +10,82 @@
             integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
             crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <style>
-        .purple-header,
-        .lightblue-header,
-        .red-header {
-            background-color: #000000 !important;
-            color: white !important;
+        /* Unified theme colors */
+        .purple-header {
+            background-color: #3E2077 !important;
+            color: #fff !important;
+            border-bottom: 3px solid #AC9BF8; /* Accent line */
         }
 
         .btn-purple {
-            background-color: #000000 !important;
-            color: white !important;
+            background-color: #AC9BF8 !important;
+            color: #3E2077 !important;
         }
 
         .btn-purple:hover {
-            background-color: #333333 !important;
-            color: white !important;
+            background-color: #C7B7F9 !important;
+            color: #3E2077 !important;
         }
 
-        .bold-text {
-            font-weight: bold !important;
+        /* Accent text and background */
+        .text-accent { color: #AC9BF8 !important; }
+        .bg-accent  { background-color: #AC9BF8 !important; color: #000 !important; }
+
+        /* Table header to match navbar */
+        .table-header-custom {
+            background-color: #3E2077 !important;
+            color: #fff !important;
+            border-top: 3px solid #AC9BF8;
         }
 
-        .purple-navbar {
-            background-color: #000000 !important;
-        }
-        .text-accent {
-         color: #AC9BF8 !important;
-        }
+       .status-pending {
+    background-color: #BFA6FF !important; /* Bright lilac */
+    color: #2D1B59 !important;            /* Dark purple text */
+    box-shadow: none !important;
+    background-image: none !important;
+}
 
-        .bg-accent {
-            background-color: #AC9BF8 !important;
-            color: #000 !important;
-        }
+.status-assigned {
+    background-color: #361A75 !important; /* Dark royal purple */
+    color: #FFFFFF !important;            /* White text */
+    box-shadow: none !important;
+    background-image: none !important;
+}
 
+.status-completed {
+    background-color: #59C18D !important; /* Vibrant mint green */
+    color: #0F4624 !important;             /* Dark green text */
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+.status-default {
+    background-color: #6C757D !important; /* Medium gray */
+    color: #FFFFFF !important;             /* White text */
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+.section-heading-gradient {
+    background: linear-gradient(90deg, #3E2077, #AC9BF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+
+        /* Bold text utility */
+        .bold-text { font-weight: bold !important; }
     </style>
-
-
 </head>
 
 <body>
-<nav class="navbar navbar-expand-lg bg-dark purple-header" data-bs-theme="dark">
+<nav class="navbar navbar-expand-lg purple-header" data-bs-theme="dark">
     <div class="container">
         <a class="navbar-brand fs-3 fw-bold text-white">Uni FSM</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent"
                 aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -61,26 +93,26 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if not current_user.is_anonymous %}
                 <li class="nav-item">
-                    <a class="nav-link text-white" aria-current="page" href="{{ url_for('jobs_list') }}">Home</a>
+                    <a class="nav-link text-white" href="{{ url_for('jobs_list') }}">Home</a>
                 </li>
                 {% endif %}
             </ul>
             <ul class="navbar-nav mb-2 mb-lg-0">
                 {% if current_user.is_anonymous %}
                 <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="{{ url_for('login') }}">Login</a>
+                    <a class="nav-link" href="{{ url_for('login') }}">Login</a>
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="{{ url_for('logout') }}">Logout {{
-                        current_user.username }}</a>
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        Logout {{ current_user.username }}
+                    </a>
                 </li>
                 {% endif %}
             </ul>
         </div>
     </div>
 </nav>
-
 
 <div class="container mt-3">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -98,12 +130,8 @@
     {% block content %}{% endblock content %}
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous">
-</script>
-
+        crossorigin="anonymous"></script>
 </body>
 </html>
-
