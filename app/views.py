@@ -1,93 +1,18 @@
-import uuid
-import os
-from flask import render_template, redirect, url_for, flash, request, jsonify
-from google.cloud import firestore
-from werkzeug.security import generate_password_hash, check_password_hash
-from app import app
-from app.models import User
-from app.forms import LoginForm
-from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
+
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import current_user, login_user, logout_user, login_required
+from werkzeug.security import check_password_hash
+
+from app import app
 from app import fb_db
-import numpy as np
-import joblib
-
-# Load AI model and encoder at startup
-try:
-    current_dir = os.path.dirname(__file__)
-    model_path = os.path.join(current_dir, "ai", "assign_model.pkl")
-    model, label_encoder = joblib.load(model_path)
-    print("AI model and label encoder loaded successfully")
-except Exception as e:
-    print(" Error loading model:", e)
-    model = None
-    label_encoder = None
-
-
-@app.route('/mapi/update_password', methods=['POST'])
-def update_password():
-    data = request.get_json()
-
-    user_id = data.get('user_id')
-    new_password = data.get('new_password')
-
-    if not user_id or not new_password:
-        return jsonify({'error': 'user_id and new_password are required'}), 400
-
-    try:
-        user_ref = fb_db.collection('users').document(user_id)
-        user_doc = user_ref.get()
-
-        if not user_doc.exists:
-            return jsonify({'error': 'User not found'}), 404
-
-        hashed_password = generate_password_hash(new_password, method='pbkdf2:sha256')
-        user_ref.update({'password': hashed_password})
-
-        return jsonify({'message': 'Password updated successfully'}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+from app.forms import LoginForm
+from app.models import User
 
 
 @app.route("/")
 def home():
     return redirect(url_for('jobs_list'))
-
-
-@app.route('/mapi/add_user', methods=['GET', 'POST'])
-def add_user():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = generate_password_hash(data.get('password'))
-    role = data.get('role')
-    skills = data.get('skills')
-    active_jobs = data.get('active_jobs')
-
-    user = {
-        'username': username,
-        'email': email,
-        'password': password,
-        'role': role,
-        'tech_available': True if role == 'Technician' else None
-    }
-
-    if role == 'Technician':
-        if not isinstance(skills, list) or len(skills) == 0:
-            return jsonify({'status': 'error', 'message': 'Add your skills'}), 400
-
-        if active_jobs is None:
-            return jsonify({'status': 'error', 'message': 'Technicians must include active_jobs'}), 400
-
-        user['tech_available'] = True
-        user['skills'] = skills
-        user['active_jobs'] = active_jobs
-
-    doc_ref = fb_db.collection('users').document()
-    doc_ref.set(user)
-
-    return jsonify({'status': 'User added successfully'}), 200
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -133,132 +58,6 @@ def login():
         return redirect(next_page)
 
     return render_template('generic_form.html', title='Login', form=form)
-
-
-@app.route('/mapi/create_job', methods=['POST', 'GET'])
-def create_job():
-    user_id = request.json.get('user_id')
-    title = request.json.get('title')
-    description = request.json.get('description')
-    job_category = request.json.get('job_category')
-    job_date = request.json.get('job_date')
-    job_time = request.json.get('job_time')
-    address = request.json.get('address')
-
-    user_doc = fb_db.collection('users').document(user_id).get()
-    if not user_doc.exists:
-        return jsonify({"error": "Invalid user"}), 404
-
-    user = user_doc.to_dict()
-    if user.get('role') != 'Student':
-        return jsonify({"error": "Only students can create jobs"}), 403
-
-    job_id = str(uuid.uuid4())
-    fb_db.collection('jobs').document(job_id).set({
-        'title': title,
-        'description': description,
-        'created_by': user_id,
-        'assigned_to': None,
-        'status': 'Pending',
-        'job_category': job_category,
-        'job_date': job_date,
-        'job_time': job_time,
-        'address': address,
-        'tech_complete': False,
-        'student_closed': False,
-        'created_at': firestore.SERVER_TIMESTAMP,
-        "closed_at": None,
-    })
-
-    assign_technician(job_id)
-
-    return jsonify({"message": "Job created", "job_id": job_id})
-
-
-def assign_technician(job_id):
-    MAX_ACTIVE_JOBS = 2
-
-    job_ref = fb_db.collection("jobs").document(job_id)
-    job_doc = job_ref.get()
-
-    if not job_doc.exists:
-        # Job not found.
-        return
-
-    job_data = job_doc.to_dict()
-    category = job_data.get("job_category")
-
-    if not category:
-        # No job category provided.
-        return
-
-    category_encoded = label_encoder.transform([category])[0]
-
-    tech_docs = fb_db.collection("users").where("role", "==", "Technician").stream()
-
-    best_score = -1
-    best_tech = None
-    best_tech_data = None
-    fallback_options = []
-
-    for tech_doc in tech_docs:
-        tech_data = tech_doc.to_dict()
-        tech_id = tech_doc.id
-        skills = tech_data.get("skills", [])
-        active_jobs = tech_data.get("active_jobs", 0)
-        skill_match = 1 if category in skills else 0
-
-        features = np.array([[category_encoded, skill_match, active_jobs]])
-        assign_prob = model.predict_proba(features)[0][1]
-
-        if skill_match:
-            fallback_options.append({
-                "technician_id": tech_id,
-                "username": tech_data.get("username"),
-                "score": round(assign_prob, 2),
-                "active_jobs": active_jobs,
-                "skills": skills
-            })
-
-        if skill_match and active_jobs < MAX_ACTIVE_JOBS and assign_prob > best_score:
-            best_score = assign_prob
-            best_tech = tech_id
-            best_tech_data = tech_data
-
-    if best_tech:
-        fresh_doc = fb_db.collection("users").document(best_tech).get()
-        fresh_data = fresh_doc.to_dict()
-        fresh_active_jobs = fresh_data.get("active_jobs", 0)
-
-        if fresh_active_jobs >= MAX_ACTIVE_JOBS:
-            best_tech = None  # Clear the assignment
-
-    if best_tech:
-
-        # Update job
-        job_ref.update({
-            "assigned_to": best_tech,
-            "status": "Assigned"
-        })
-
-        # Update technician
-        new_active_jobs = best_tech_data.get("active_jobs", 0) + 1
-        update_data = {
-            "active_jobs": new_active_jobs
-        }
-
-        if new_active_jobs >= MAX_ACTIVE_JOBS:
-            update_data["tech_available"] = False
-
-        fb_db.collection("users").document(best_tech).update(update_data)
-
-    else:
-        fallback_options = sorted(fallback_options, key=lambda x: x["score"], reverse=True)[:3]
-        print(fallback_options)
-        job_ref.update({
-            "assignment_suggestions": fallback_options,
-            "status": "Pending"
-        })
 
 
 @app.route('/jobs_list')
@@ -308,10 +107,8 @@ def jobs_list():
 
         job_date = job.get('job_date') or 'N/A'
 
-        # Check for AI suggestions
         suggestions = job.get('assignment_suggestions', [])
 
-        # Optional: enhance suggestions with technician name
         enhanced_suggestions = []
         for s in suggestions:
             tech_id = s.get('technician_id')
@@ -333,7 +130,7 @@ def jobs_list():
             'job_date': job_date,
             'status': job.get('status', 'N/A'),
             'assigned_to': assigned_to,
-            'suggestions': enhanced_suggestions  # Add to context
+            'suggestions': enhanced_suggestions
         })
 
     return render_template(
@@ -366,83 +163,7 @@ def reassign_technician():
     return redirect(url_for('jobs_list'))
 
 
-@app.route('/mapi/jobs_list', methods=['GET'])
-def jobs_list_client():
-    user_id = request.args.get('user_id')
-    role = request.args.get('role')
-
-    jobs_query = fb_db.collection('jobs')
-
-    if user_id and role == 'Student':
-        jobs_query = jobs_query.where('created_by', '==', user_id)
-    elif user_id and role == 'Technician':
-        jobs_query = jobs_query.where('assigned_to', '==', user_id)
-
-    docs = jobs_query.stream()
-
-    jobs = []
-    for doc in docs:
-        job = doc.to_dict()
-        job['job_id'] = doc.id
-
-        created_by_id = job.get('created_by')
-        created_by_user = {}
-        if created_by_id:
-            user_doc = fb_db.collection('users').document(created_by_id).get()
-            if user_doc.exists:
-                user_data = user_doc.to_dict()
-                created_by_user = {
-                    "user_id": created_by_id,
-                    "username": user_data.get('username', user_data.get('username'))  # fallback to email
-                }
-
-        assigned_to_id = job.get('assigned_to')
-        assigned_to_user = None
-        if assigned_to_id:
-            tech_doc = fb_db.collection('users').document(assigned_to_id).get()
-            if tech_doc.exists:
-                tech_data = tech_doc.to_dict()
-                assigned_to_user = {
-                    "user_id": assigned_to_id,
-                    "username": tech_data.get('username', tech_data.get('username'))  # fallback to email
-                }
-
-        job['created_by'] = created_by_user
-        job['assigned_to'] = assigned_to_user  # could be None
-
-        jobs.append(job)
-
-    return jsonify(jobs)
-
-
-@app.route('/mapi/login', methods=['POST'])
-def login_mobile():
-    username = request.json.get('username')
-    password = request.json.get('password')
-
-    user_ref = fb_db.collection('users').where('username', '==', username).limit(1)
-    docs = user_ref.stream()
-    user_doc = next(docs, None)
-
-    if not user_doc:
-        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
-
-    user = user_doc.to_dict()
-
-    if not check_password_hash(user['password'], password):
-        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
-
-    return jsonify({
-        "message": "Login successful",
-        "status": "success",
-        "user_id": user_doc.id,
-        "username": user['username'],
-        "email": user['email'],
-        "role": user['role']
-    }), 200
-
-
-@app.route('/mapi/job/<job_id>')
+@app.route('/job/<job_id>')
 @login_required
 def job_details(job_id):
     job_doc = fb_db.collection('jobs').document(job_id).get()
