@@ -1,18 +1,21 @@
 import os
 import uuid
 
-from flask import request, jsonify
+import boto3
+from flask import jsonify
+from flask import request
 from google.cloud import firestore
+from werkzeug.security import check_password_hash
 
 from app import app
 from app import fb_db
-import boto3
 
 # JOB status
 # Pending
 # Assigned
 # OnProcess
 # Completed
+# Closed
 
 # === AWS S3 Config ===
 S3_BUCKET = os.getenv("S3_BUCKET")
@@ -29,8 +32,84 @@ s3 = boto3.client(
 )
 
 
+@app.route('/mapi/login', methods=['POST'])
+def login_mobile():
+    username = request.json.get('username')
+    password = request.json.get('password')
+
+    user_ref = fb_db.collection('users').where('username', '==', username).limit(1)
+    docs = user_ref.stream()
+    user_doc = next(docs, None)
+
+    if not user_doc:
+        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
+
+    user = user_doc.to_dict()
+
+    if not check_password_hash(user['password'], password):
+        return jsonify({"message": "Login failed. Invalid username or password", "status": "error"}), 401
+
+    return jsonify({
+        "message": "Login successful",
+        "status": "success",
+        "user_id": user_doc.id,
+        "username": user['username'],
+        "email": user['email'],
+        "role": user['role']
+    }), 200
+
+
+@app.route('/mapi/jobs_list', methods=['GET'])
+def jobs_list_client():
+    user_id = request.args.get('user_id')
+    role = request.args.get('role')
+
+    jobs_query = fb_db.collection('jobs')
+
+    if user_id and role == 'Student':
+        jobs_query = jobs_query.where('created_by', '==', user_id)
+    elif user_id and role == 'Technician':
+        jobs_query = jobs_query.where('assigned_to', '==', user_id)
+
+    docs = jobs_query.stream()
+
+    jobs = []
+    for doc in docs:
+        job = doc.to_dict()
+        job['job_id'] = doc.id
+
+        created_by_id = job.get('created_by')
+        created_by_user = {}
+        if created_by_id:
+            user_doc = fb_db.collection('users').document(created_by_id).get()
+            if user_doc.exists:
+                user_data = user_doc.to_dict()
+                created_by_user = {
+                    "user_id": created_by_id,
+                    "username": user_data.get('username', user_data.get('username'))  # fallback to email
+                }
+
+        assigned_to_id = job.get('assigned_to')
+        assigned_to_user = None
+        if assigned_to_id:
+            tech_doc = fb_db.collection('users').document(assigned_to_id).get()
+            if tech_doc.exists:
+                tech_data = tech_doc.to_dict()
+                assigned_to_user = {
+                    "user_id": assigned_to_id,
+                    "username": tech_data.get('username', tech_data.get('username'))  # fallback to email
+                }
+
+        job['created_by'] = created_by_user
+        job['assigned_to'] = assigned_to_user
+
+        jobs.append(job)
+
+    return jsonify(jobs)
+
+
 @app.route('/mapi/job_detail', methods=['GET'])
-def api_job_detail():
+def job_detail_client():
     job_id = request.args.get('job_id')
     if not job_id:
         return jsonify({"error": "Missing job_id"}), 400

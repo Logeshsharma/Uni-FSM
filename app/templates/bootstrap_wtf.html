@@ -10,83 +10,100 @@
     .bold-text {
         font-weight: bold !important; /* Force bold text */
     }
+  .btn-dark-gradient {
+        background: linear-gradient(90deg, #2c2c2c, #595959); /* black to dark grey */
+        color: #fff; /* white text for contrast */
+        font-weight: 600;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+    }
+
+    .btn-dark-gradient:hover {
+        background: linear-gradient(90deg, #1a1a1a, #7a7a7a);
+        transform: translateY(-2px);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        opacity: 0.95;
+    }
 </style>
 
 {% macro form_field(field, autofocus) %}
-  {%- if field.type == 'BooleanField' %}
-  <div class="form-check mb-3">
+{%- if field.type == 'BooleanField' %}
+<div class="form-check mb-3">
     {{ field(class='form-check-input') }}
     {{ field.label(class='form-check-label bold-text') }}
-  </div>
-  {%- elif field.type == 'RadioField' %}
-    {{ field.label(class='form-label bold-text') }}
-    {%- for item in field %}
-    <div class="form-check{% if loop.last %} mb-3{% endif %}">
-      {{ item(class='form-check-input') }}
-      {{ item.label(class='form-check-label bold-text') }}
-    </div>
-    {%- endfor %}
-  {%- elif field.type == 'SelectField' %}
-    {{ field.label(class='form-label bold-text') }}
-    {{ field(class='form-select mb-3 bold-text' + (' is-invalid' if field.errors else '')) }}
-    {%- for error in field.errors %}
-    <div class="invalid-feedback">{{ error }}</div>
-    {%- endfor %}
-  {%- elif field.type == 'TextAreaField' %}
-  <div class="mb-3">
+</div>
+{%- elif field.type == 'RadioField' %}
+{{ field.label(class='form-label bold-text') }}
+{%- for item in field %}
+<div class="form-check{% if loop.last %} mb-3{% endif %}">
+    {{ item(class='form-check-input') }}
+    {{ item.label(class='form-check-label bold-text') }}
+</div>
+{%- endfor %}
+{%- elif field.type == 'SelectField' %}
+{{ field.label(class='form-label bold-text') }}
+{{ field(class='form-select mb-3 bold-text' + (' is-invalid' if field.errors else '')) }}
+{%- for error in field.errors %}
+<div class="invalid-feedback">{{ error }}</div>
+{%- endfor %}
+{%- elif field.type == 'TextAreaField' %}
+<div class="mb-3">
     {{ field.label(class='form-label bold-text') }}
     {% if autofocus %}
-      {{ field(class='form-control' + (' is-invalid' if field.errors else ''), autofocus=True) }}
+    {{ field(class='form-control' + (' is-invalid' if field.errors else ''), autofocus=True) }}
     {% else %}
-      {{ field(class='form-control' + (' is-invalid' if field.errors else '')) }}
+    {{ field(class='form-control' + (' is-invalid' if field.errors else '')) }}
     {% endif %}
     {%- for error in field.errors %}
     <div class="invalid-feedback">{{ error }}</div>
     {%- endfor %}
-  </div>
-  {%- elif field.type == 'SubmitField' %}
-  {{ field(class='btn btn-purple mb-3 bold-text') }}  <!-- Add bold-text here -->
-  {%- else %}
-  <div class="mb-3">
-    {{ field.label(class='form-label bold-text') }}  <!-- Add bold-text here -->
+</div>
+{%- elif field.type == 'SubmitField' %}
+{{ field(class='btn btn-dark-gradient mb-3 bold-text') }}
+{%- else %}
+<div class="mb-3">
+    {{ field.label(class='form-label bold-text') }}
     {% if autofocus %}
-      {{ field(class='form-control' + (' is-invalid' if field.errors else ''), autofocus=True) }}
+    {{ field(class='form-control' + (' is-invalid' if field.errors else ''), autofocus=True) }}
     {% else %}
-      {{ field(class='form-control' + (' is-invalid' if field.errors else '')) }}
+    {{ field(class='form-control' + (' is-invalid' if field.errors else '')) }}
     {% endif %}
     {%- for error in field.errors %}
     <div class="invalid-feedback">{{ error }}</div>
     {%- endfor %}
-  </div>
-  {%- endif %}
+</div>
+{%- endif %}
 {% endmacro %}
 
 {% macro quick_form(form, action="", method="post", id="", novalidate=False, autofocus=False) %}
 <form
-  {%- if action != None %} action="{{ action }}"{% endif -%}
-  {%- if method %} method="{{ method }}"{% endif %}
-  {%- if id %} id="{{ id }}"{% endif -%}
-  {%- if novalidate %} novalidate{% endif -%}>
-  {{ form.hidden_tag() }}
-  {%- for field, errors in form.errors.items() %}
+        {%- if action !=None %} action="{{ action }}" {% endif -%}
+        {%- if method %} method="{{ method }}" {% endif %}
+        {%- if id %} id="{{ id }}" {% endif -%}
+        {%- if novalidate %} novalidate{% endif -%}>
+    {{ form.hidden_tag() }}
+    {%- for field, errors in form.errors.items() %}
     {#
-      ListWidget does not have an input_type attribute, so causes an exception here when checked. FieldList and RadioField
-      both use ListWidget, so they have to be specifically excluded before checking for widget.input_type
+    ListWidget does not have an input_type attribute, so causes an exception here when checked. FieldList and RadioField
+    both use ListWidget, so they have to be specifically excluded before checking for widget.input_type
     #}
     {%- if field.widget is defined and field.widget.input_type is defined and field.widget.input_type == 'hidden' %}
-      {%- for error in errors %}
-      <div class="invalid-feedback">{{ error }}</div>
-      {%- endfor %}
+    {%- for error in errors %}
+    <div class="invalid-feedback">{{ error }}</div>
+    {%- endfor %}
     {%- endif %}
 
-  {%- endfor %}
+    {%- endfor %}
 
-  {% set ns = namespace(first_field=autofocus) %}
-  {%- for field in form %}
+    {% set ns = namespace(first_field=autofocus) %}
+    {%- for field in form %}
     {% if field.widget.input_type is undefined or field.widget.input_type != 'hidden' -%}
-      {{ form_field(field, ns.first_field) }}
-      {% set ns.first_field = false %}
+    {{ form_field(field, ns.first_field) }}
+    {% set ns.first_field = false %}
     {%- endif %}
-  {%- endfor %}
+    {%- endfor %}
 </form>
 {% endmacro %}

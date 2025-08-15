@@ -12,76 +12,221 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
-        /* Unified theme colors */
-        .purple-header {
-            background-color: #3E2077 !important;
+        .navbar-dark-grey {
+            background-color: #212529 !important; /* Dark grey/black */
             color: #fff !important;
-            border-bottom: 3px solid #AC9BF8; /* Accent line */
+            border-bottom: 3px solid #6c757d; /* Subtle accent line */
         }
 
-        .btn-purple {
-            background-color: #AC9BF8 !important;
-            color: #3E2077 !important;
+        /* Button styles */
+        .btn-grey {
+            background-color: #6c757d !important;
+            color: white !important;
+        }
+        .btn-grey:hover {
+            background-color: #5a6268 !important;
         }
 
-        .btn-purple:hover {
-            background-color: #C7B7F9 !important;
-            color: #3E2077 !important;
-        }
-
-        /* Accent text and background */
-        .text-accent { color: #AC9BF8 !important; }
-        .bg-accent  { background-color: #AC9BF8 !important; color: #000 !important; }
+        /* Accent text and background (neutral) */
+        .text-accent { color: #212529 !important; }
+        .bg-accent  { background-color: #6c757d !important; color: #fff !important; }
 
         /* Table header to match navbar */
         .table-header-custom {
-            background-color: #3E2077 !important;
+            background-color: #343a40 !important;
             color: #fff !important;
-            border-top: 3px solid #AC9BF8;
+            border-top: 3px solid #6c757d;
         }
 
-       .status-pending {
-    background-color: #BFA6FF !important; /* Bright lilac */
-    color: #2D1B59 !important;            /* Dark purple text */
-    box-shadow: none !important;
-    background-image: none !important;
-}
+        /* Status badges */
+        .status-pending {
+            background-color: #ffc107 !important; /* yellow */
+            color: #212529 !important;
+        }
+        .status-assigned {
+            background-color: #0d6efd !important; /* blue */
+            color: #fff !important;
+        }
+        .status-completed {
+            background-color: #198754 !important; /* green */
+            color: #fff !important;
+        }
+        .status-default {
+            background-color: #6c757d !important; /* grey */
+            color: #fff !important;
+        }
 
-.status-assigned {
-    background-color: #361A75 !important; /* Dark royal purple */
-    color: #FFFFFF !important;            /* White text */
-    box-shadow: none !important;
-    background-image: none !important;
-}
-
-.status-completed {
-    background-color: #59C18D !important; /* Vibrant mint green */
-    color: #0F4624 !important;             /* Dark green text */
-    box-shadow: none !important;
-    background-image: none !important;
-}
-
-.status-default {
-    background-color: #6C757D !important; /* Medium gray */
-    color: #FFFFFF !important;             /* White text */
-    box-shadow: none !important;
-    background-image: none !important;
-}
-
-.section-heading-gradient {
-    background: linear-gradient(90deg, #3E2077, #AC9BF8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
+        /* Section heading */
+        .section-heading {
+            color: #212529 !important;
+            border-bottom: 3px solid #6c757d;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
 
         /* Bold text utility */
         .bold-text { font-weight: bold !important; }
+               /* ======== TABLE HEADER ======== */
+        #jobsTable thead.table-header-custom th {
+            background-color: #F0F2F5 !important; /* light grey header */
+            color: #495057 !important;           /* dark grey text */
+            font-weight: 600 !important;
+            border-bottom: 2px solid #dee2e6 !important; /* subtle divider */
+        }
+
+        /* ======== TABLE BODY ======== */
+        #jobsTable tbody tr {
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* very subtle shadow */
+        }
+
+        /* Alternate row colors - softer */
+        #jobsTable tbody tr:nth-child(odd) { background-color: #ffffff; }
+        #jobsTable tbody tr:nth-child(even) { background-color: #fdfdfe; }
+
+        /* Column dividers - subtle */
+        #jobsTable td,
+        #jobsTable th {
+            border-right: 1px solid #f1f3f5;
+        }
+        #jobsTable td:last-child,
+        #jobsTable th:last-child {
+            border-right: none;
+        }
+
+        /* Highlight key columns - softer */
+        #jobsTable td:first-child,
+        #jobsTable td:nth-child(7),
+        #jobsTable td:last-child {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        /* Links inside table */
+        #jobsTable a.text-accent {
+            color: #0d6efd !important;
+            font-weight: 500;
+        }
+        #jobsTable a.text-accent:hover {
+            text-decoration: underline;
+        }
+
+
+        /* ========= STATUS BADGES ========= */
+        .status-pending {
+            background-color: #ffeeba !important; /* soft pastel yellow */
+            color: #5c5407 !important;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .status-assigned {
+            background-color: #cfe2ff !important; /* soft pastel blue */
+            color: #084298 !important;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .status-completed {
+            background-color: #d1e7dd !important; /* soft pastel green */
+            color: #0f5132 !important;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .status-default {
+            background-color: #e2e3e5 !important; /* soft grey */
+            color: #41464b !important;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        /* ========= SECTION HEADING ========= */
+        .section-heading {
+            color: #212529 !important;
+            border-bottom: 0px solid #6c757d;
+            padding-bottom: 20px;
+            margin-bottom: 0px;
+        }
+
+        /* Suggestions row */
+        .suggestions-row td {
+            padding-top: 16px !important;
+            padding-bottom: 16px !important;
+        }
+
+        /* Buttons */
+        .btn-grey {
+            background-color: #6c757d !important;
+            color: white !important;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .btn-grey:hover {
+            background-color: #5a6268 !important;
+        }
+
+        /* Dropdowns */
+        .form-select-sm {
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        /* ========= PAGINATION ========= */
+        .pagination .page-item .page-link {
+            color: #212529;
+            border: 1px solid #6c757d;
+            background-color: #fff;
+            margin: 0 2px;
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+        .pagination .page-item .page-link:hover {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #212529 !important;
+            border-color: #212529 !important;
+            color: #fff !important;
+        }
+
+            .text-accent {
+            background: linear-gradient(90deg, #42A5F5, #1E88E5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .text-accent:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .btn-dark-gradient {
+        background: linear-gradient(90deg, #2c2c2c, #595959); /* black to dark grey */
+        color: #fff; /* white text for contrast */
+        font-weight: 600;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+    }
+
+    .btn-dark-gradient:hover {
+        background: linear-gradient(90deg, #1a1a1a, #7a7a7a);
+        transform: translateY(-2px);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        opacity: 0.95;
+    }
     </style>
 </head>
 
 <body>
-<nav class="navbar navbar-expand-lg purple-header" data-bs-theme="dark">
+<nav class="navbar navbar-expand-lg navbar-dark-grey" data-bs-theme="dark">
     <div class="container">
         <a class="navbar-brand fs-3 fw-bold text-white">Uni FSM</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
