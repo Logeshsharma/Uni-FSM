@@ -1,56 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h3 class="mb-4 text-dark fw-bold">Job Details</h3>
+<div class="container mt-4 mb-5">
+    <h3 class="mb-4 fw-bold section-heading-gradient">Job Details</h3>
 
     <div class="card shadow-sm rounded border-0">
-        <div class="card-header purple-header text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 text-white">Job ID: <span class="fw-semibold">{{ job.job_id }}</span></h5>
-
+        <div class="card-header table-header-custom text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white">
+                Job ID: <span class="fw-semibold">{{ job.job_id }}</span>
+            </h5>
         </div>
 
         <div class="card-body">
             <dl class="row">
-                <dt class="col-sm-4 text-secondary">Title</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Title</dt>
                 <dd class="col-sm-8 fw-semibold">{{ job.title }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Description</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Description</dt>
                 <dd class="col-sm-8">{{ job.description }}</dd>
 
-                <dt>Status</dt>
-                <dd>
+                <dt class="col-sm-4 text-muted fw-semibold">Status</dt>
+                <dd class="col-sm-8">
                     <span class="badge
-                {% if job.status == 'Pending' %}bg-warning
-                {% elif job.status == 'Assigned' %}bg-info
-                {% elif job.status == 'Completed' %}bg-success
-                {% else %}bg-secondary{% endif %} text-white">
-                {{ job.status }}
-                </span>
+                        {% if job.status == 'Pending' %}status-pending
+                        {% elif job.status == 'Assigned' %}status-assigned
+                        {% elif job.status == 'Completed' %}status-completed
+                        {% else %}status-default{% endif %}">
+                        {{ job.status }}
+                    </span>
                 </dd>
 
-                <dt class="col-sm-4 text-secondary">Category</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Category</dt>
                 <dd class="col-sm-8">
                     {% if job.job_category %}
-                    <span class="badge bg-primary">{{ job.job_category }}</span>
+                    <span class="badge bg-accent">
+                            {{ job.job_category }}
+                        </span>
                     {% else %}
                     <span class="text-muted">N/A</span>
                     {% endif %}
                 </dd>
 
-                <dt class="col-sm-4 text-secondary">Created By</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Created By</dt>
                 <dd class="col-sm-8">{{ created_by }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Scheduled Date</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Scheduled Date</dt>
                 <dd class="col-sm-8">{{ job.job_date or 'N/A' }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Scheduled Time</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Scheduled Time</dt>
                 <dd class="col-sm-8">{{ job.job_time or 'N/A' }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Address</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Address</dt>
                 <dd class="col-sm-8">{{ job.address or 'N/A' }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Assigned Technician</dt>
+                <dt class="col-sm-4 text-muted fw-semibold">Assigned Technician</dt>
                 <dd class="col-sm-8">
                     {% if assigned_to %}
                     <span class="fw-semibold">{{ assigned_to }}</span>
@@ -63,7 +66,7 @@
             <div class="row mt-4">
                 {% if job.before_image_uploaded %}
                 <div class="col-md-6 mb-4">
-                    <h5 class="fw-semibold text-secondary mb-3">Before Images</h5>
+                    <h5 class="fw-semibold text-muted mb-3">Before Images</h5>
                     <div class="d-flex flex-wrap gap-3">
                         {% for img_url in job.before_images %}
                         <img src="{{ img_url }}" alt="Before Image"
@@ -76,7 +79,7 @@
 
                 {% if job.after_image_uploaded %}
                 <div class="col-md-6 mb-4">
-                    <h5 class="fw-semibold text-secondary mb-3">After Images</h5>
+                    <h5 class="fw-semibold text-muted mb-3">After Images</h5>
                     <div class="d-flex flex-wrap gap-3">
                         {% for img_url in job.after_images %}
                         <img src="{{ img_url }}" alt="After Image"
@@ -90,7 +93,7 @@
         </div>
 
         <div class="card-footer bg-light text-end">
-            <a href="{{ url_for('jobs_list') }}" class="btn btn-purple">
+            <a href="{{ url_for('jobs_list') }}" class="btn btn-sm btn-dark-gradient">
                 ← Back to Job List
             </a>
         </div>
