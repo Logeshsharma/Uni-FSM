@@ -13,7 +13,7 @@ job_categories = ["Bathroom", "Electrical", "Furniture", "Kitchen Appliances", "
 num_jobs = 500
 technicians = []
 
-# Fetch technicians from Firestore
+# Fetch technicians who are available in the system
 docs = db.collection('users').where('role', '==', 'Technician').stream()
 for doc in docs:
     data = doc.to_dict()
@@ -24,7 +24,7 @@ for doc in docs:
         "active_jobs": data.get("active_jobs", 0)
     })
 
-# Generate synthetic jobs data and
+# Generate job assignment data for model training
 rows = []
 for i in range(num_jobs):
     job_id = f"job_{i+1}"

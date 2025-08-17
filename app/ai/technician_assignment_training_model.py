@@ -3,6 +3,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import joblib
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Load the data
 df = pd.read_csv("job_assignment_data.csv")
@@ -28,3 +30,20 @@ joblib.dump((model, label_encoder), "assign_model.pkl")
 accuracy = model.score(X_test, y_test)
 print(f" Model trained with accuracy: {accuracy:.2f}")
 print(" Model saved as assign_model.pkl")
+
+# Get feature importances
+importances = model.feature_importances_
+
+# Correct feature names (must match X)
+feature_names = ["Job Category", "Skill Match", "Active Jobs"]
+
+# Sort features by importance
+indices = np.argsort(importances)[::-1]
+
+# Plot
+plt.figure(figsize=(6,4))
+plt.bar(range(len(importances)), importances[indices], align="center")
+plt.xticks(range(len(importances)), [feature_names[i] for i in indices])
+plt.ylabel("Importance")
+plt.title("Technician Assignment Graph")
+plt.show()
