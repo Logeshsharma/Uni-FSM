@@ -8,9 +8,10 @@ from app import app
 from app import fb_db
 from app.forms import LoginForm
 from app.models import User
+from config import Config
 
 
-@app.route("/")
+@app.route('/')
 def home():
     return redirect(url_for('jobs_list'))
 
@@ -35,10 +36,10 @@ def login():
 
         user_dict = user_data.to_dict()
 
-        if user_dict['role'] != "Admin":
+        if user_dict['role'] != 'Admin':
             flash(
-                "Only admins can use the online portal. Use the mobile Mix&Meet app for student or technician access.",
-                "danger")
+                'Only admins can use the online portal. Use the mobile Mix&Meet app for student or technician access.',
+                'danger')
             return redirect(url_for('login'))
 
         if not check_password_hash(user_dict['password'], password):
@@ -83,11 +84,12 @@ def jobs_list():
         data = tech.to_dict()
         tech_id = tech.id
         is_busy = tech_id in busy_tech_ids
-        status_label = "Busy" if is_busy else "Available"
+        status_label = 'Busy' if is_busy else 'Available'
         available_technicians_map[tech_id] = {
             'id': tech_id,
             'name': data.get('username', data.get('email')),
-            'status_label': status_label
+            'status_label': status_label,
+            'skills': data.get('skills')
         }
 
     jobs = []
@@ -96,7 +98,7 @@ def jobs_list():
         job_id = doc.id
 
         created_by_id = job.get('created_by')
-        created_by_name = "N/A"
+        created_by_name = 'N/A'
         if created_by_id:
             user_doc = fb_db.collection('users').document(created_by_id).get()
             if user_doc.exists:
@@ -112,7 +114,7 @@ def jobs_list():
         enhanced_suggestions = []
         for s in suggestions:
             tech_id = s.get('technician_id')
-            tech_name = available_technicians_map.get(tech_id, {}).get('name', "Unknown")
+            tech_name = available_technicians_map.get(tech_id, {}).get('name', 'Unknown')
             enhanced_suggestions.append({
                 'technician_id': tech_id,
                 'technician_name': tech_name,
@@ -136,7 +138,7 @@ def jobs_list():
     return render_template(
         'jobs_list.html',
         jobs=jobs,
-        title="Jobs",
+        title='Jobs',
         available_technicians=list(available_technicians_map.values()),
     )
 
@@ -145,19 +147,44 @@ def jobs_list():
 @login_required
 def reassign_technician():
     if current_user.role != 'Admin':
-        return "Forbidden", 403
+        return 'Forbidden', 403
 
     job_id = request.form.get('job_id')
     new_tech_id = request.form.get('assigned_to')
 
     if job_id and new_tech_id:
-        fb_db.collection('jobs').document(job_id).update({
+        job_ref = fb_db.collection('jobs').document(job_id)
+        job_data = job_ref.get().to_dict()
+
+        old_tech_id = job_data.get("assigned_to")
+
+        # Update the job
+        job_ref.update({
             'assigned_to': new_tech_id,
             'status': 'Assigned'
         })
-        fb_db.collection('users').document(new_tech_id).update({
-            'tech_available': False
-        })
+
+        # Decrement old technician’s active_jobs
+        if old_tech_id:
+            old_tech_ref = fb_db.collection('users').document(old_tech_id)
+            old_tech_data = old_tech_ref.get().to_dict()
+            old_active = max(0, old_tech_data.get("active_jobs", 0) - 1)
+
+            old_update = {"active_jobs": old_active}
+            if old_active < Config.MAX_ACTIVE_JOBS:
+                old_update["tech_available"] = True
+            old_tech_ref.update(old_update)
+
+        # Increment new technician’s active_jobs
+        new_tech_ref = fb_db.collection('users').document(new_tech_id)
+        new_tech_data = new_tech_ref.get().to_dict()
+        new_active = new_tech_data.get("active_jobs", 0) + 1
+
+        new_update = {"active_jobs": new_active}
+        if new_active >= Config.MAX_ACTIVE_JOBS:
+            new_update["tech_available"] = False
+        new_tech_ref.update(new_update)
+
         flash('Technician reassigned successfully', 'success')
 
     return redirect(url_for('jobs_list'))
@@ -178,14 +205,14 @@ def job_details(job_id):
     job['before_images'] = job.get('images', {}).get('before', [])
     job['after_images'] = job.get('images', {}).get('after', [])
 
-    created_by = "N/A"
+    created_by = 'N/A'
     if job.get('created_by'):
         user_doc = fb_db.collection('users').document(job['created_by']).get()
         if user_doc.exists:
             created_by = user_doc.to_dict().get('username')
 
     # Get assigned technician username
-    assigned_to = "Unassigned"
+    assigned_to = 'Unassigned'
     if job.get('assigned_to'):
         tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
         if tech_doc.exists:
@@ -193,7 +220,7 @@ def job_details(job_id):
 
     return render_template(
         'job_details.html',
-        title="Job Details",
+        title='Job Details',
         job=job,
         created_by=created_by,
         assigned_to=assigned_to

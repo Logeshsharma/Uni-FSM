@@ -34,4 +34,4 @@ else:
     firebase_app = firebase_admin.initialize_app(cred)
     fb_db = firestore.client()
 
-from app import views, models, mobile
+from app import views, models, mobile, extra, create_job_ai_assign

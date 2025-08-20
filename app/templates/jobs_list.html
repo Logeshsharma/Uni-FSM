@@ -26,9 +26,9 @@
                         {{ job.job_id[:6] }}..
                     </a>
                 </td>
-                <td>{{ job.title }}</td>
+                <td>{{ job.title[:15] }}..</td>
                 <td><span class="badge bg-accent">{{ job.job_category }}</span></td>
-                <td>{{ job.description }}</td>
+                <td>{{ job.description[:40] }}..</td>
                 <td>{{ job.created_by }}</td>
                 <td>{{ job.job_date }}</td>
                 <td>
@@ -50,6 +50,9 @@
                             <option value="{{ tech.id }}"
                                     {% if job.assigned_to and tech.id== job.assigned_to.id %}selected{% endif %}>
                                 {{ tech.name }} ({{ tech.status_label }})
+                                {% if tech.skills %}
+                                - Skills: {{ tech.skills | join(', ') }}
+                                {% endif %}
                             </option>
                             {% endfor %}
                         </select>
