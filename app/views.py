@@ -10,7 +10,7 @@ from app.forms import LoginForm
 from app.models import User
 
 
-@app.route("/")
+@app.route('/')
 def home():
     return redirect(url_for('jobs_list'))
 
@@ -35,10 +35,10 @@ def login():
 
         user_dict = user_data.to_dict()
 
-        if user_dict['role'] != "Admin":
+        if user_dict['role'] != 'Admin':
             flash(
-                "Only admins can use the online portal. Use the mobile Mix&Meet app for student or technician access.",
-                "danger")
+                'Only admins can use the online portal. Use the mobile Mix&Meet app for student or technician access.',
+                'danger')
             return redirect(url_for('login'))
 
         if not check_password_hash(user_dict['password'], password):
@@ -83,11 +83,12 @@ def jobs_list():
         data = tech.to_dict()
         tech_id = tech.id
         is_busy = tech_id in busy_tech_ids
-        status_label = "Busy" if is_busy else "Available"
+        status_label = 'Busy' if is_busy else 'Available'
         available_technicians_map[tech_id] = {
             'id': tech_id,
             'name': data.get('username', data.get('email')),
-            'status_label': status_label
+            'status_label': status_label,
+            'skills': data.get('skills')
         }
 
     jobs = []
@@ -96,7 +97,7 @@ def jobs_list():
         job_id = doc.id
 
         created_by_id = job.get('created_by')
-        created_by_name = "N/A"
+        created_by_name = 'N/A'
         if created_by_id:
             user_doc = fb_db.collection('users').document(created_by_id).get()
             if user_doc.exists:
@@ -112,7 +113,7 @@ def jobs_list():
         enhanced_suggestions = []
         for s in suggestions:
             tech_id = s.get('technician_id')
-            tech_name = available_technicians_map.get(tech_id, {}).get('name', "Unknown")
+            tech_name = available_technicians_map.get(tech_id, {}).get('name', 'Unknown')
             enhanced_suggestions.append({
                 'technician_id': tech_id,
                 'technician_name': tech_name,
@@ -136,7 +137,7 @@ def jobs_list():
     return render_template(
         'jobs_list.html',
         jobs=jobs,
-        title="Jobs",
+        title='Jobs',
         available_technicians=list(available_technicians_map.values()),
     )
 
@@ -145,7 +146,7 @@ def jobs_list():
 @login_required
 def reassign_technician():
     if current_user.role != 'Admin':
-        return "Forbidden", 403
+        return 'Forbidden', 403
 
     job_id = request.form.get('job_id')
     new_tech_id = request.form.get('assigned_to')
@@ -178,14 +179,14 @@ def job_details(job_id):
     job['before_images'] = job.get('images', {}).get('before', [])
     job['after_images'] = job.get('images', {}).get('after', [])
 
-    created_by = "N/A"
+    created_by = 'N/A'
     if job.get('created_by'):
         user_doc = fb_db.collection('users').document(job['created_by']).get()
         if user_doc.exists:
             created_by = user_doc.to_dict().get('username')
 
     # Get assigned technician username
-    assigned_to = "Unassigned"
+    assigned_to = 'Unassigned'
     if job.get('assigned_to'):
         tech_doc = fb_db.collection('users').document(job['assigned_to']).get()
         if tech_doc.exists:
@@ -193,7 +194,7 @@ def job_details(job_id):
 
     return render_template(
         'job_details.html',
-        title="Job Details",
+        title='Job Details',
         job=job,
         created_by=created_by,
         assigned_to=assigned_to

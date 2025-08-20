@@ -50,6 +50,9 @@
                             <option value="{{ tech.id }}"
                                     {% if job.assigned_to and tech.id== job.assigned_to.id %}selected{% endif %}>
                                 {{ tech.name }} ({{ tech.status_label }})
+                                {% if tech.skills %}
+                                - Skills: {{ tech.skills | join(', ') }}
+                                {% endif %}
                             </option>
                             {% endfor %}
                         </select>
