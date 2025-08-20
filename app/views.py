@@ -8,6 +8,7 @@ from app import app
 from app import fb_db
 from app.forms import LoginForm
 from app.models import User
+from config import Config
 
 
 @app.route('/')
@@ -152,13 +153,38 @@ def reassign_technician():
     new_tech_id = request.form.get('assigned_to')
 
     if job_id and new_tech_id:
-        fb_db.collection('jobs').document(job_id).update({
+        job_ref = fb_db.collection('jobs').document(job_id)
+        job_data = job_ref.get().to_dict()
+
+        old_tech_id = job_data.get("assigned_to")
+
+        # Update the job
+        job_ref.update({
             'assigned_to': new_tech_id,
             'status': 'Assigned'
         })
-        fb_db.collection('users').document(new_tech_id).update({
-            'tech_available': False
-        })
+
+        # Decrement old technician’s active_jobs
+        if old_tech_id:
+            old_tech_ref = fb_db.collection('users').document(old_tech_id)
+            old_tech_data = old_tech_ref.get().to_dict()
+            old_active = max(0, old_tech_data.get("active_jobs", 0) - 1)
+
+            old_update = {"active_jobs": old_active}
+            if old_active < Config.MAX_ACTIVE_JOBS:
+                old_update["tech_available"] = True
+            old_tech_ref.update(old_update)
+
+        # Increment new technician’s active_jobs
+        new_tech_ref = fb_db.collection('users').document(new_tech_id)
+        new_tech_data = new_tech_ref.get().to_dict()
+        new_active = new_tech_data.get("active_jobs", 0) + 1
+
+        new_update = {"active_jobs": new_active}
+        if new_active >= Config.MAX_ACTIVE_JOBS:
+            new_update["tech_available"] = False
+        new_tech_ref.update(new_update)
+
         flash('Technician reassigned successfully', 'success')
 
     return redirect(url_for('jobs_list'))

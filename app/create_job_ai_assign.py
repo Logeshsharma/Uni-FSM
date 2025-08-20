@@ -8,6 +8,7 @@ from google.cloud import firestore
 
 from app import app
 from app import fb_db
+from config import Config
 
 # Load AI model and encoder at startup
 try:
@@ -19,7 +20,6 @@ except Exception as e:
     print(" Error loading model:", e)
     model = None
     label_encoder = None
-
 
 
 @app.route('/mapi/create_job', methods=['POST', 'GET'])
@@ -63,8 +63,6 @@ def create_job():
 
 
 def assign_technician(job_id):
-    MAX_ACTIVE_JOBS = 2
-
     job_ref = fb_db.collection("jobs").document(job_id)
     job_doc = job_ref.get()
 
@@ -107,7 +105,7 @@ def assign_technician(job_id):
                 "skills": skills
             })
 
-        if skill_match and active_jobs < MAX_ACTIVE_JOBS and assign_prob > best_score:
+        if skill_match and active_jobs < Config.MAX_ACTIVE_JOBS and assign_prob > best_score:
             best_score = assign_prob
             best_tech = tech_id
             best_tech_data = tech_data
@@ -117,7 +115,7 @@ def assign_technician(job_id):
         fresh_data = fresh_doc.to_dict()
         fresh_active_jobs = fresh_data.get("active_jobs", 0)
 
-        if fresh_active_jobs >= MAX_ACTIVE_JOBS:
+        if fresh_active_jobs >= Config.MAX_ACTIVE_JOBS:
             best_tech = None  # Clear the assignment
 
     if best_tech:
@@ -134,14 +132,13 @@ def assign_technician(job_id):
             "active_jobs": new_active_jobs
         }
 
-        if new_active_jobs >= MAX_ACTIVE_JOBS:
+        if new_active_jobs >= Config.MAX_ACTIVE_JOBS:
             update_data["tech_available"] = False
 
         fb_db.collection("users").document(best_tech).update(update_data)
 
     else:
         fallback_options = sorted(fallback_options, key=lambda x: x["score"], reverse=True)[:3]
-        print(fallback_options)
         job_ref.update({
             "assignment_suggestions": fallback_options,
             "status": "Pending"
